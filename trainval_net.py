@@ -1,8 +1,9 @@
 # --------------------------------------------------------
-# Pytorch multi-GPU Faster R-CNN
+# PyTorch Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
-# Written by Jiasen Lu, Jianwei Yang, based on code from Ross Girshick
+# Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -44,7 +45,7 @@ def parse_args():
     #                     default='pascal_voc', type=str)
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
-                        default='pascal_voc_face', type=str)
+                        default='voc_car_2007', type=str)
     parser.add_argument('--net', dest='net',
                         help='res50, res101',
                         default='res18', type=str)
@@ -161,30 +162,23 @@ if __name__ == '__main__':
         args.imdb_name = "voc_2007_trainval"
         args.imdbval_name = "voc_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
-    elif args.dataset == "pascal_voc_face":
-        args.imdb_name = "voc_face_2010_trainval"
-        args.imdbval_name = "voc_face_2010_test"
+    elif args.dataset == "voc_car_2007":
+        args.imdb_name = "voc_car_2007_trainval"
+        args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
-    elif args.dataset == "pascal_voc_0712":
-        args.imdb_name = "voc_2007_trainval+voc_2012_trainval"
-        args.imdbval_name = "voc_2007_test"
+    elif args.dataset == "voc_car_2010":
+        args.imdb_name = "voc_car_2010_trainval"
+        args.imdbval_name = "voc_car_2010_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
-    elif args.dataset == "coco":
-        args.imdb_name = "coco_2014_train+coco_2014_valminusminival"
-        args.imdbval_name = "coco_2014_minival"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
-    elif args.dataset == "imagenet":
-        args.imdb_name = "imagenet_train"
-        args.imdbval_name = "imagenet_val"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
-    elif args.dataset == "vg":
-        # train sizes: train, smalltrain, minitrain
-        # train scale: ['150-50-20', '150-50-50', '500-150-80', '750-250-150', '1750-700-450', '1600-400-20']
-        args.imdb_name = "vg_150-50-50_minitrain"
-        args.imdbval_name = "vg_150-50-50_minival"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
+    elif args.dataset == "voc_car_0710":
+        args.imdb_name = "voc_car_2007_trainval+voc_car_2010_trainval"
+        args.imdbval_name = "voc_car_2010_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
 
     args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)

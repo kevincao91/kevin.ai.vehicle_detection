@@ -1,6 +1,5 @@
 # --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
+# PyTorch Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
+# Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------

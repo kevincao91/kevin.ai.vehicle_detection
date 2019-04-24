@@ -169,17 +169,12 @@ if __name__ == '__main__':
                                      'cow', 'diningtable', 'dog', 'horse',
                                      'motorbike', 'person', 'pottedplant',
                                      'sheep', 'sofa', 'train', 'tvmonitor'])
-    elif args.dataset == "pascal_voc_face":
+    elif args.dataset == "voc_car_2007":
         pascal_classes = np.asarray(['__background__',
-                                     'face'])
-    elif args.dataset == "pascal_voc_0712":
-        pascal_classes = None
-    elif args.dataset == "coco":
-        pascal_classes = None
-    elif args.dataset == "imagenet":
-        pascal_classes = None
-    elif args.dataset == "vg":
-        pascal_classes = None
+                                     'car'])
+    elif args.dataset == "pascal_voc_0710":
+        pascal_classes = np.asarray(['__background__',
+                                     'car'])
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
@@ -412,12 +407,13 @@ if __name__ == '__main__':
         detect_time = det_toc - det_tic
         misc_tic = time.time()
         # test
-        im2show = constraint_check(im_bgr, pascal_classes, scores, pred_boxes, thresh, class_agnostic=args.class_agnostic)
+        im2show = constraint_check(im_bgr, pascal_classes, scores, pred_boxes, thresh,
+                                   class_agnostic=args.class_agnostic)
 
         misc_toc = time.time()
         nms_time = misc_toc - misc_tic
 
-        if vis: 
+        if vis:
             cv2.imshow('frame', cv2.resize(im2show, None, fx=0.8, fy=0.8))
             if cv2.waitKey(10) & 0xFF == ord('q'):
                 break

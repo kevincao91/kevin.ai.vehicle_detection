@@ -1,8 +1,9 @@
 # --------------------------------------------------------
-# Tensorflow Faster R-CNN
+# PyTorch Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
-# Written by Jiasen Lu, Jianwei Yang, based on code from Ross Girshick
+# Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -33,11 +34,6 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
 import pdb
-
-try:
-    xrange  # Python 2
-except NameError:
-    xrange = range  # Python 3
 
 
 def parse_args():
@@ -110,31 +106,23 @@ if __name__ == '__main__':
         args.imdb_name = "voc_2007_trainval"
         args.imdbval_name = "voc_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-    elif args.dataset == "pascal_voc_face":
-        args.imdb_name = "voc_face_2010_trainval"
-        args.imdbval_name = "voc_face_2010_test"
+    elif args.dataset == "voc_car_2007":
+        args.imdb_name = "voc_car_2007_trainval"
+        args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-    elif args.dataset == "pascal_voc_0712":
-        args.imdb_name = "voc_2007_trainval+voc_2012_trainval"
-        args.imdbval_name = "voc_2007_test"
+    elif args.dataset == "voc_car_2010":
+        args.imdb_name = "voc_car_2010_trainval"
+        args.imdbval_name = "voc_car_2010_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-    elif args.dataset == "coco":
-        args.imdb_name = "coco_2014_train+coco_2014_valminusminival"
-        args.imdbval_name = "coco_2014_minival"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-    elif args.dataset == "imagenet":
-        args.imdb_name = "imagenet_train"
-        args.imdbval_name = "imagenet_val"
+    elif args.dataset == "voc_car_0710":
+        args.imdb_name = "voc_car_2007_trainval+voc_car_2010_trainval"
+        args.imdbval_name = "voc_car_2010_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
-    elif args.dataset == "vg":
-        args.imdb_name = "vg_150-50-50_minitrain"
-        args.imdbval_name = "vg_150-50-50_minival"
-        args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
 
     args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
-    if args.dataset == "pascal_voc_face":
-        cfg_from_file("cfgs/pascal_voc_face.yml")
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
@@ -219,8 +207,8 @@ if __name__ == '__main__':
 
     save_name = 'faster_rcnn_10'
     num_images = len(imdb.image_index)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
+    all_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, save_name)
     dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
@@ -283,7 +271,7 @@ if __name__ == '__main__':
         if vis:
             im = cv2.imread(imdb.image_path_at(i))
             im2show = np.copy(im)
-        for j in xrange(1, imdb.num_classes):
+        for j in range(1, imdb.num_classes):
             inds = torch.nonzero(scores[:, j] > thresh).view(-1)
             # if there is det
             if inds.numel() > 0:
@@ -308,10 +296,10 @@ if __name__ == '__main__':
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]
-                                      for j in xrange(1, imdb.num_classes)])
+                                      for j in range(1, imdb.num_classes)])
             if len(image_scores) > max_per_image:
                 image_thresh = np.sort(image_scores)[-max_per_image]
-                for j in xrange(1, imdb.num_classes):
+                for j in range(1, imdb.num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                     all_boxes[j][i] = all_boxes[j][i][keep, :]
 

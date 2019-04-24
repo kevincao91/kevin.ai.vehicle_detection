@@ -78,12 +78,6 @@ def get_regional(im_h, im_w):
     # if y >= direction*(k*x+b):  keep
     # read point list
     # for img point
-    # line_point_list = [( 0              , 0               , round(im_w*3/7), 0               ,  1),
-    #                    ( round(im_w*3/7), 0               , im_w           , round(im_h*0.65),  1),
-    #                    ( im_w           , round(im_h*0.65), im_w           , im_h            , -1),
-    #                    ( im_w           , im_h            , round(im_w/3)  , im_h            , -1),
-    #                    ( round(im_w/3)  , im_h            , 0              , round(im_h/3)   , -1),
-    #                    ( 0              , round(im_h/3)   , 0              , 0               ,  1)]
     
     # for video
     line_point_list = [( 0               , 0               , round(im_w*0.35), 0               ,  1),
@@ -92,6 +86,13 @@ def get_regional(im_h, im_w):
                        ( im_w            , im_h            , round(im_w*0.26), im_h            , -1),
                        ( round(im_w*0.26), im_h            , 0               , round(im_h*0.61), -1),
                        ( 0               , round(im_h*0.61), 0               , 0               ,  1)]
+
+    line_point_list = [( 0              , 0               , round(im_w*3/7), 0               ,  1),
+                       ( round(im_w*3/7), 0               , im_w           , round(im_h*0.65),  1),
+                       ( im_w           , round(im_h*0.65), im_w           , im_h            , -1),
+                       ( im_w           , im_h            , round(im_w/3)  , im_h            , -1),
+                       ( round(im_w/3)  , im_h            , 0              , round(im_h/3)   , -1),
+                       ( 0              , round(im_h/3)   , 0              , 0               ,  1)]
 
 
     return line_point_list

@@ -44,7 +44,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
-                        default='pascal_voc_face', type=str)
+                        default='voc_2007', type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
                         default='cfgs/res18.yml', type=str)
@@ -80,7 +80,7 @@ def parse_args():
                         default=7, type=int)
     parser.add_argument('--checkpoint', dest='checkpoint',
                         help='checkpoint to load network',
-                        default=4451, type=int)
+                        default=2150, type=int)
     parser.add_argument('--bs', dest='batch_size',
                         help='batch_size',
                         default=1, type=int)
@@ -167,17 +167,12 @@ if __name__ == '__main__':
                                      'cow', 'diningtable', 'dog', 'horse',
                                      'motorbike', 'person', 'pottedplant',
                                      'sheep', 'sofa', 'train', 'tvmonitor'])
-    elif args.dataset == "pascal_voc_face":
+    elif args.dataset == "voc_car_2007":
         pascal_classes = np.asarray(['__background__',
-                                     'face'])
-    elif args.dataset == "pascal_voc_0712":
-        pascal_classes = None
-    elif args.dataset == "coco":
-        pascal_classes = None
-    elif args.dataset == "imagenet":
-        pascal_classes = None
-    elif args.dataset == "vg":
-        pascal_classes = None
+                                     'car'])
+    elif args.dataset == "pascal_voc_0710":
+        pascal_classes = np.asarray(['__background__',
+                                     'car'])
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)

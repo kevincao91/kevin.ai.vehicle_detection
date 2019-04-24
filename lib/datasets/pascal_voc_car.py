@@ -1,10 +1,7 @@
-from __future__ import print_function
-from __future__ import absolute_import
 # --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
+# PyTorch Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
+# Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
 import xml.dom.minidom as minidom
@@ -29,26 +26,21 @@ from .voc_eval import voc_eval
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
 
-try:
-    xrange  # Python 2
-except NameError:
-    xrange = range  # Python 3
-
 
 # <<<< obsolete
 
 
-class pascal_voc_face(imdb):
+class pascal_voc_car(imdb):
     def __init__(self, image_set, year, devkit_path=None):
-        imdb.__init__(self, 'voc_face_' + year + '_' + image_set)
+        imdb.__init__(self, 'voc_car_' + year + '_' + image_set)
         self._year = year
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'VOCFace' + self._year)
+        self._data_path = os.path.join(self._devkit_path, 'VOCCar' + self._year)
         self._classes = ('__background__',  # always index 0
-                         'face')
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+                         'car')
+        self._class_to_ind = dict(zip(self.classes, range(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
@@ -66,7 +58,7 @@ class pascal_voc_face(imdb):
                        'min_size': 2}
 
         assert os.path.exists(self._devkit_path), \
-            'VOCFACEdevkit path does not exist: {}'.format(self._devkit_path)
+            'VOCCARdevkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), \
             'Path does not exist: {}'.format(self._data_path)
 
@@ -108,9 +100,10 @@ class pascal_voc_face(imdb):
 
     def _get_default_path(self):
         """
-        Return the default path where PASCAL VOC is expected to be installed.
+        Return the default path where PASCAL VOC CAR is expected to be installed.
         """
-        return os.path.join(cfg.DATA_DIR, 'VOCFACEdevkit' + self._year)
+        # return os.path.join(cfg.DATA_DIR, 'VOCCARdevkit' + self._year)
+        return os.path.join(cfg.DATA_DIR, 'VOCCARdevkit')
 
     def gt_roidb(self):
         """
@@ -189,7 +182,7 @@ class pascal_voc_face(imdb):
         raw_data = sio.loadmat(filename)['boxes'].ravel()
 
         box_list = []
-        for i in xrange(raw_data.shape[0]):
+        for i in range(raw_data.shape[0]):
             boxes = raw_data[i][:, (1, 0, 3, 2)] - 1
             keep = ds_utils.unique_boxes(boxes)
             boxes = boxes[keep, :]
@@ -269,7 +262,7 @@ class pascal_voc_face(imdb):
     def _get_voc_results_file_template(self):
         # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
         filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
-        filedir = os.path.join(self._devkit_path, 'results', 'VOCFace' + self._year, 'Main')
+        filedir = os.path.join(self._devkit_path, 'results', 'VOCCar' + self._year, 'Main')
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)
@@ -287,7 +280,7 @@ class pascal_voc_face(imdb):
                     if dets == []:
                         continue
                     # the VOCdevkit expects 1-based indices
-                    for k in xrange(dets.shape[0]):
+                    for k in range(dets.shape[0]):
                         f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
                                 format(index, dets[k, -1],
                                        dets[k, 0] + 1, dets[k, 1] + 1,
@@ -296,12 +289,12 @@ class pascal_voc_face(imdb):
     def _do_python_eval(self, output_dir='output'):
         annopath = os.path.join(
             self._devkit_path,
-            'VOCFace' + self._year,
+            'VOCCar' + self._year,
             'Annotations',
             '{:s}.xml')
         imagesetfile = os.path.join(
             self._devkit_path,
-            'VOCFace' + self._year,
+            'VOCCar' + self._year,
             'ImageSets',
             'Main',
             self._image_set + '.txt')
@@ -375,7 +368,7 @@ class pascal_voc_face(imdb):
 
 
 if __name__ == '__main__':
-    d = pascal_voc_face('trainval', '2010')
+    d = pascal_voc_car('trainval', '2007')
     res = d.roidb
     from IPython import embed;
 
