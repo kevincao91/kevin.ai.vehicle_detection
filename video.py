@@ -35,6 +35,7 @@ from model.faster_rcnn.resnet import resnet
 import pdb
 import pynvml
 from custom_operations.custom_check import constraint_check
+from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful
 
 
 def parse_args():
@@ -93,6 +94,9 @@ def parse_args():
     parser.add_argument('--video', dest='video_file_name',
                         help='Video File Name',
                         default='video.mp4', type=str)
+    parser.add_argument('--gpu_id', dest='gpu_id',
+                        help='which gpu is used',
+                        default=0, type=int)
 
     args = parser.parse_args()
     return args
@@ -102,6 +106,21 @@ lr = cfg.TRAIN.LEARNING_RATE
 momentum = cfg.TRAIN.MOMENTUM
 weight_decay = cfg.TRAIN.WEIGHT_DECAY
 
+def _get_avg(num_list, long=10):
+    """average number input.
+  Arguments:
+    num_list (list): a list of number input
+  Returns:
+    num_avg (float): a float average number of input
+  """
+    if not num_list:
+        return 0
+    if len(num_list) >= long:
+        num_avg = sum(num_list[-10:]) / 10
+    else:
+        num_avg = sum(num_list) / len(num_list)
+
+    return num_avg
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -148,12 +167,30 @@ def _get_image_blob(im):
 
 
 if __name__ == '__main__':
-
-    # 这里的0是GPU id
-    GPU_id = 0
-    pynvml.nvmlInit()
-
+    # 获取指令参数
     args = parse_args()
+
+    # 显卡信息获取
+    # 这里的0是用的GPU id
+    gpu_id = args.gpu_id
+    pynvml.nvmlInit()
+    print("============= Driver Information =============")
+    driver_version = pynvml.nvmlSystemGetDriverVersion()
+    driver_version = str(driver_version, encoding='utf-8')
+    print("Driver Version:", driver_version)   # 显卡驱动版本
+    device_Count = pynvml.nvmlDeviceGetCount() # 几块显卡
+    print("GPU Count:", device_Count)
+    gpu_info_list = []
+    for i in range(device_Count):
+        handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+        gpu_name = pynvml.nvmlDeviceGetName(handle)     # name
+        gpu_name = str(gpu_name, encoding='utf-8')
+        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        mem_total = meminfo.total / (1024 * 1024 * 1024)   # bit --> G
+        mem_used = meminfo.used / (1024 * 1024 * 1024)   # bit --> G
+        gpu_info_list.append([i, gpu_name, mem_used, mem_total])
+        print("Device %d :  %s   %.6f G / %.6f G" % (i, gpu_name, mem_used, mem_total)) # 具体是什么显卡
+    print("==============================================")
 
     print('Called with args:')
     print(args)
@@ -169,12 +206,12 @@ if __name__ == '__main__':
                                      'cow', 'diningtable', 'dog', 'horse',
                                      'motorbike', 'person', 'pottedplant',
                                      'sheep', 'sofa', 'train', 'tvmonitor'])
-    elif args.dataset == "voc_car_2007":
+    else:
         pascal_classes = np.asarray(['__background__',
                                      'car'])
-    elif args.dataset == "pascal_voc_0710":
-        pascal_classes = np.asarray(['__background__',
-                                     'car'])
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
 
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
@@ -227,7 +264,7 @@ if __name__ == '__main__':
     print('load model successfully!')
 
     # 显示显存
-    handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_id)
+    handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
     meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
     print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'after load the weight')
     # pdb.set_trace()
@@ -272,7 +309,8 @@ if __name__ == '__main__':
     # Set up webcam or get image from video
     if webcam_num >= 0:
         cap = cv2.VideoCapture(webcam_num)
-        num_images = 0
+        num_frame = 100000
+        num_images = num_frame
     else:
         # use opencv open the video
         cap = cv2.VideoCapture(video_file_name)
@@ -295,11 +333,14 @@ if __name__ == '__main__':
     # 清理显卡缓存
     torch.cuda.empty_cache()
     # 显示显存
-    handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_id)
+    handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
     meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
     print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'before img itr')
-    pynvml.nvmlShutdown()
+    # pynvml.nvmlShutdown()
 
+    total_time_list = []  # 预设的空值
+    detect_time_list = []  # 预设空值
+    nms_time_list = []  # 预设空值
     while num_images > 0:
         total_tic = time.time()
         if webcam_num == -1:
@@ -344,26 +385,23 @@ if __name__ == '__main__':
         num_boxes.resize_(1).zero_()
 
         # 显示显存
-        # handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_id)
+        # handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
         # meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
         # print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'befor go in net', num_images+1)
 
         # pdb.set_trace()
+        # 开始推理
         det_tic = time.time()
 
-        # with torch.no_grad():
-        #     rois, cls_prob, bbox_pred, \
-        #     rpn_loss_cls, rpn_loss_box, \
-        #     RCNN_loss_cls, RCNN_loss_bbox, \
-        #     rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+        with torch.no_grad():
+            rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box, RCNN_loss_cls, RCNN_loss_bbox, rois_label = \
+                fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
-        rois, cls_prob, bbox_pred, \
-        rpn_loss_cls, rpn_loss_box, \
-        RCNN_loss_cls, RCNN_loss_bbox, \
-        rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+        # rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box, RCNN_loss_cls, RCNN_loss_bbox, rois_label = \
+        #     fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
         # 显示显存
-        # handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_id)
+        # handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
         # meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
         # print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'after go in net', num_images+1)
 
@@ -403,15 +441,72 @@ if __name__ == '__main__':
 
         scores = scores.squeeze()
         pred_boxes = pred_boxes.squeeze()
+
         det_toc = time.time()
         detect_time = det_toc - det_tic
-        misc_tic = time.time()
-        # test
-        im2show = constraint_check(im_bgr, pascal_classes, scores, pred_boxes, thresh,
-                                   class_agnostic=args.class_agnostic)
+        detect_time_list.append(detect_time)
 
-        misc_toc = time.time()
-        nms_time = misc_toc - misc_tic
+
+        # 开始nms
+        nms_tic = time.time()
+        # test
+        # im2show = constraint_check(im_bgr, pascal_classes, scores, pred_boxes, thresh,
+        #                           class_agnostic=args.class_agnostic)
+        all_cls_dets = []
+        for j in range(1, len(pascal_classes)):
+            inds = torch.nonzero(scores[:, j] > thresh).view(-1)
+            # if there is det
+            if inds.numel() > 0:
+                cls_scores = scores[:, j][inds]
+                _, order = torch.sort(cls_scores, 0, True)
+                if args.class_agnostic:
+                    cls_boxes = pred_boxes[inds, :]
+                else:
+                    cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
+
+                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+                # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
+                cls_dets = cls_dets[order]
+                # keep = nms(cls_dets, cfg.TEST.NMS, force_cpu=not cfg.USE_GPU_NMS)
+                keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
+                cls_dets = cls_dets[keep.view(-1).long()]
+                # regional_check
+                all_cls_dets.append(cls_dets.cpu().numpy())
+
+        nms_toc = time.time()
+        nms_time = nms_toc - nms_tic
+        nms_time_list.append(nms_time)
+
+
+        # 绘制图形与文字
+        # plot box and label
+        im2show = np.copy(im_bgr)
+        im2show, all_cls_dets = constraint_check(im2show, all_cls_dets)
+        if len(all_cls_dets):    # no value check
+            for j in range(1, len(pascal_classes)):
+                cls_dets = all_cls_dets[j-1]
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, thresh=0.8)
+        # plot string
+        # gpu info
+        handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)    
+        meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+        mem_used = meminfo.used / (1024 * 1024 * 1024)     # bit --> G
+        # average calculate
+        detect_time_avg = _get_avg(detect_time_list)
+        nms_time_avg = _get_avg(nms_time_list)
+        if total_time_list:
+            total_time = total_time_list[-1]    # 取上一帧的总时间，这帧显示，如果是第一张就是预设时间
+            total_time_avg = _get_avg(total_time_list)
+        else:
+            total_time = 0.888                  # any no-zero value
+            total_time_avg = 0.888
+        # fps calculate
+        frame_rate = 1 / total_time
+        frame_rate_avg = 1 / total_time_avg
+        # need time calculate
+        need_time = num_images / frame_rate
+        need_time_avg = num_images / frame_rate_avg
+        im2show = vis_text_beautiful(im2show, [gpu_name, mem_used, mem_total, detect_time_avg, nms_time_avg, total_time_avg, frame_rate_avg])
 
         if vis:
             cv2.imshow('frame', cv2.resize(im2show, None, fx=0.8, fy=0.8))
@@ -420,25 +515,27 @@ if __name__ == '__main__':
         # result_path = os.path.join(args.image_dir, str(num_images) + "_det.jpg")
         # cv2.imwrite(result_path, im2show)
         videowriter.write(im2show)  # write one frame into the output video
-        # fps caulate
-        total_toc = time.time()
-        total_time = total_toc - total_tic
-        frame_rate = 1 / total_time
-        # need time caulate
-        need_time = num_images / frame_rate
+
         # print sys
-        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s {:.3f}s  fps: {:.3f} Hz need_time: {:.3f}s \r' \
-                         .format(num_images + 1, num_frame, detect_time, nms_time, total_time, frame_rate, need_time))
+        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s {:.3f}s  fps: {:.3f} Hz need_time: {:.3f}s \r'
+                         .format(num_images + 1, num_frame, detect_time_avg, nms_time_avg, total_time_avg, frame_rate_avg,
+                                 need_time_avg))
         sys.stdout.flush()
 
+        total_toc = time.time()
+        total_time = total_toc - total_tic
+        total_time_list.append(total_time)
+
         # 清除缓存
-        # torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         # 显示显存
-        # handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_id)
+        # handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
         # meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
         # print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'after empty cache')
 
+    # clean worksapce    
+    pynvml.nvmlShutdown()
+    videowriter.release()
     if webcam_num >= 0:
         cap.release()
-        videowriter.release()
         cv2.destroyAllWindows()
