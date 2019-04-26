@@ -160,7 +160,7 @@ Then you will find the detection results in folder $ROOT/images.
 Below are some detection results:
 
 <div style="color:#0000FF" align="center">
-<img src="images/img1_det_res101.jpg" width="430"/> <img src="images/img3_det_res101.jpg" width="430"/>
+<img src="images/img1.jpg" width="430"/> <img src="images/img1_det.jpg" width="430"/>
 </div>
 
 ## Webcam Demo
