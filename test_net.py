@@ -121,13 +121,17 @@ if __name__ == '__main__':
 
     args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
+    elif args.dataset == "voc_car_2010":
+        cfg_from_file("cfgs/voc_car_2010.yml")
+    else:
+        pass
 
     print('Using config:')
     pprint.pprint(cfg)

@@ -1,14 +1,14 @@
-kevin.ai.faster_rcnn_pytorch_1.0_torchvision
+kevin.ai.vehicle_detection
 ====
 
-A pytorch implementation of faster r-cnn, use torchvision pretrained weight.
+A pytorch implementation of vehicle detection.
 -------
 
 # Introduction
 
-This project is a *faster* pytorch implementation of faster R-CNN, aimed to accelerating the training of faster R-CNN object detection models.
+This project is a *faster* pytorch implementation of vehicle detection, aimed to accelerating the training and inference of faster R-CNN vehicle detection models.
 
-During our implementing, we referred many implementations, especially  [jwyang/faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch). However, our implementation has several unique and new features compared with the above implementations:
+During our implementing, we referred our another work [jwyang/faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch). And our implementation has several unique and new features in object detection:
 
 * **It supports torchvision pretrained model**. We convert the code to use torchvision pretrained model weight in pytorch!.
 

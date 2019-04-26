@@ -205,13 +205,17 @@ if __name__ == '__main__':
         pascal_classes = np.asarray(['__background__',
                                      'car'])
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
+    elif args.dataset == "voc_car_2010":
+        cfg_from_file("cfgs/voc_car_2010.yml")
+    else:
+        pass
 
     cfg.USE_GPU_NMS = args.cuda
 
@@ -462,6 +466,9 @@ if __name__ == '__main__':
                 cls_dets = all_cls_dets[j-1]
                 im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, thresh=0.8)
         # plot string
+        # model info
+        model_name = args.net
+        file_name = load_name
         # gpu info
         handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)    
         meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
@@ -481,7 +488,8 @@ if __name__ == '__main__':
         # need time calculate
         need_time = num_images / frame_rate
         need_time_avg = num_images / frame_rate_avg
-        im2show = vis_text_beautiful(im2show, [gpu_name, mem_used, mem_total, detect_time_avg, nms_time_avg, total_time_avg, frame_rate_avg])
+        im2show = vis_text_beautiful(im2show, [gpu_name, mem_used, mem_total, model_name, file_name, detect_time_avg,
+                                               nms_time_avg, total_time_avg, frame_rate_avg])
 
         if webcam_num >= 0:
             cv2.imshow('frame', cv2.resize(im2show, None, fx=1.0, fy=1.0))

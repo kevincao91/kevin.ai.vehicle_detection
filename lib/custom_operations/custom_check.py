@@ -50,12 +50,13 @@ def get_regional(im_h, im_w):
                        ( round(im_w*0.26), im_h            , 0               , round(im_h*0.61), -1),
                        ( 0               , round(im_h*0.61), 0               , round(im_h*0.15),  1)]
 
-    # line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.60), round(im_h*0.15),  1),
-    #                    ( round(im_w*0.60), round(im_h*0.15), im_w            , round(im_h*0.65),  1),
-    #                    ( im_w            , round(im_h*0.65), im_w            , im_h            , -1),
-    #                    ( im_w            , im_h            , round(im_w/3)   , im_h            , -1),
-    #                    ( round(im_w/3)   , im_h            , 0               , round(im_h/3)   , -1),
-    #                    ( 0               , round(im_h/3)   , 0               , round(im_h*0.15),  1)]
+    # for image
+    line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.60), round(im_h*0.15),  1),
+                       ( round(im_w*0.60), round(im_h*0.15), im_w            , round(im_h*0.65),  1),
+                       ( im_w            , round(im_h*0.65), im_w            , im_h            , -1),
+                       ( im_w            , im_h            , round(im_w/3)   , im_h            , -1),
+                       ( round(im_w/3)   , im_h            , 0               , round(im_h/3)   , -1),
+                       ( 0               , round(im_h/3)   , 0               , round(im_h*0.15),  1)]
 
     return line_point_list
 

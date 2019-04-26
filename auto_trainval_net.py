@@ -177,13 +177,17 @@ if __name__ == '__main__':
 
     args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
+    elif args.dataset == "voc_car_2010":
+        cfg_from_file("cfgs/voc_car_2010.yml")
+    else:
+        pass
 
     print('Using config:')
     pprint.pprint(cfg)
@@ -306,7 +310,7 @@ if __name__ == '__main__':
     # 设置学习率下降策略
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',
-                                                           factor=0.1,
+                                                           factor=0.618,
                                                            patience=15,
                                                            verbose=True,
                                                            threshold=0.005,
@@ -387,14 +391,10 @@ if __name__ == '__main__':
                     }
                     logger.add_scalars("logs_s_{}/losses".format(args.session), info,
                                        (epoch - 1) * iters_per_epoch + step)
-
-                loss_temp = 0
-                start = time.time()
                 # 更新学习率
                 scheduler.step(loss_temp)
-            # 达到最小lr，跳出
-            if lr_now == 1e-08:
-                break
+                loss_temp = 0
+                start = time.time()
 
         save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
         save_checkpoint({
@@ -406,6 +406,12 @@ if __name__ == '__main__':
             'class_agnostic': args.class_agnostic,
         }, save_name)
         print('save model: {}'.format(save_name))
+
+        # 达到最小lr，跳出
+        lr_now = [group['lr'] for group in optimizer.param_groups][0]
+        print('监测 lr : ', lr_now)
+        if lr_now <= 1e-08:
+            break
 
     if args.use_tfboard:
         logger.close()

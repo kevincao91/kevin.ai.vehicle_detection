@@ -106,6 +106,7 @@ lr = cfg.TRAIN.LEARNING_RATE
 momentum = cfg.TRAIN.MOMENTUM
 weight_decay = cfg.TRAIN.WEIGHT_DECAY
 
+
 def _get_avg(num_list, long=10):
     """average number input.
   Arguments:
@@ -121,6 +122,7 @@ def _get_avg(num_list, long=10):
         num_avg = sum(num_list) / len(num_list)
 
     return num_avg
+
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -177,19 +179,19 @@ if __name__ == '__main__':
     print("============= Driver Information =============")
     driver_version = pynvml.nvmlSystemGetDriverVersion()
     driver_version = str(driver_version, encoding='utf-8')
-    print("Driver Version:", driver_version)   # 显卡驱动版本
-    device_Count = pynvml.nvmlDeviceGetCount() # 几块显卡
+    print("Driver Version:", driver_version)  # 显卡驱动版本
+    device_Count = pynvml.nvmlDeviceGetCount()  # 几块显卡
     print("GPU Count:", device_Count)
     gpu_info_list = []
     for i in range(device_Count):
         handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-        gpu_name = pynvml.nvmlDeviceGetName(handle)     # name
+        gpu_name = pynvml.nvmlDeviceGetName(handle)  # name
         gpu_name = str(gpu_name, encoding='utf-8')
         meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        mem_total = meminfo.total / (1024 * 1024 * 1024)   # bit --> G
-        mem_used = meminfo.used / (1024 * 1024 * 1024)   # bit --> G
+        mem_total = meminfo.total / (1024 * 1024 * 1024)  # bit --> G
+        mem_used = meminfo.used / (1024 * 1024 * 1024)  # bit --> G
         gpu_info_list.append([i, gpu_name, mem_used, mem_total])
-        print("Device %d :  %s   %.6f G / %.6f G" % (i, gpu_name, mem_used, mem_total)) # 具体是什么显卡
+        print("Device %d :  %s   %.6f G / %.6f G" % (i, gpu_name, mem_used, mem_total))  # 具体是什么显卡
     print("==============================================")
 
     print('Called with args:')
@@ -210,13 +212,17 @@ if __name__ == '__main__':
         pascal_classes = np.asarray(['__background__',
                                      'car'])
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-
-    if args.cfg_file is not None:
-        cfg_from_file(args.cfg_file)
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+
+    if args.dataset == "voc_car_0710":
+        cfg_from_file("cfgs/voc_car_0710.yml")
+    elif args.dataset == "voc_car_2010":
+        cfg_from_file("cfgs/voc_car_2010.yml")
+    else:
+        pass
 
     cfg.USE_GPU_NMS = args.cuda
 
@@ -446,7 +452,6 @@ if __name__ == '__main__':
         detect_time = det_toc - det_tic
         detect_time_list.append(detect_time)
 
-
         # 开始nms
         nms_tic = time.time()
         # test
@@ -477,28 +482,30 @@ if __name__ == '__main__':
         nms_time = nms_toc - nms_tic
         nms_time_list.append(nms_time)
 
-
         # 绘制图形与文字
         # plot box and label
         im2show = np.copy(im_bgr)
         im2show, all_cls_dets = constraint_check(im2show, all_cls_dets)
-        if len(all_cls_dets):    # no value check
+        if len(all_cls_dets):  # no value check
             for j in range(1, len(pascal_classes)):
-                cls_dets = all_cls_dets[j-1]
+                cls_dets = all_cls_dets[j - 1]
                 im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, thresh=0.8)
         # plot string
+        # model info
+        model_name = args.net
+        file_name = load_name
         # gpu info
-        handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)    
+        handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
         meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        mem_used = meminfo.used / (1024 * 1024 * 1024)     # bit --> G
+        mem_used = meminfo.used / (1024 * 1024 * 1024)  # bit --> G
         # average calculate
         detect_time_avg = _get_avg(detect_time_list)
         nms_time_avg = _get_avg(nms_time_list)
         if total_time_list:
-            total_time = total_time_list[-1]    # 取上一帧的总时间，这帧显示，如果是第一张就是预设时间
+            total_time = total_time_list[-1]  # 取上一帧的总时间，这帧显示，如果是第一张就是预设时间
             total_time_avg = _get_avg(total_time_list)
         else:
-            total_time = 0.888                  # any no-zero value
+            total_time = 0.888  # any no-zero value
             total_time_avg = 0.888
         # fps calculate
         frame_rate = 1 / total_time
@@ -506,7 +513,8 @@ if __name__ == '__main__':
         # need time calculate
         need_time = num_images / frame_rate
         need_time_avg = num_images / frame_rate_avg
-        im2show = vis_text_beautiful(im2show, [gpu_name, mem_used, mem_total, detect_time_avg, nms_time_avg, total_time_avg, frame_rate_avg])
+        im2show = vis_text_beautiful(im2show, [gpu_name, mem_used, mem_total, model_name, file_name, detect_time_avg,
+                                               nms_time_avg, total_time_avg, frame_rate_avg])
 
         if vis:
             cv2.imshow('frame', cv2.resize(im2show, None, fx=0.8, fy=0.8))
@@ -518,7 +526,8 @@ if __name__ == '__main__':
 
         # print sys
         sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s {:.3f}s  fps: {:.3f} Hz need_time: {:.3f}s \r'
-                         .format(num_images + 1, num_frame, detect_time_avg, nms_time_avg, total_time_avg, frame_rate_avg,
+                         .format(num_images + 1, num_frame, detect_time_avg, nms_time_avg, total_time_avg,
+                                 frame_rate_avg,
                                  need_time_avg))
         sys.stdout.flush()
 
