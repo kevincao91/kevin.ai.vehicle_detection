@@ -8,34 +8,32 @@ A pytorch implementation of vehicle detection.
 
 This project is a *faster* pytorch implementation of vehicle detection, aimed to accelerating the training and inference of faster R-CNN vehicle detection models.
 
-During our implementing, we referred our another work [jwyang/faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch). And our implementation has several unique and new features in object detection:
+During our implementing, we referred our another work [kevincao91/kevin.ai.faster_rcnn_pytorch_1.0_torchvision](https://github.com/kevincao91/kevin.ai.faster_rcnn_pytorch_1.0_torchvision). And our implementation has several unique and new features in object detection:
 
-* **It supports torchvision pretrained model**. We convert the code to use torchvision pretrained model weight in pytorch!.
+* **It is more efficient anchor generaton**. We use some useful trick to calculate the more efficient super parameters in anchor generaton to improve the training and inferencing results!
 
-* **It is memory efficient**. We use the no grad model during the demo.
+* **It is multiple infomation show in image**. We give multiple infomation show no image during the demo and video.
 
-* **It is support pytorch-1.0**. We change the code to run faster R-CNN in pytorch-1.0.
+* **It is use auto training process**. We give a more simple training control in our implementation, only focus on lr_inti, lr_gama and max_epoch.
+
+* **It is target for slimming and fast model**. todo.
 
 ## Benchmarking
 
-We benchmark our code thoroughly on pascal voc datasets, using four different network architecture: resnet18, resnet34, resnet50, resnet101. Below are the results:
+We benchmark our code thoroughly on our custom voc datasets, using four different network architecture: resnet18, resnet34, resnet50, resnet101. We pay more attention to the inference time rather than training time, so we check many inference result. Below are the results:
 
-1). PASCAL VOC 2007 (Train/Test: 07trainval/07test, scale=600, ROI Align)
+1). Custom VOC datasets (it contains 357 image wtih 1280 * 720 RGB format)(Train/Test: 07trainval/07test, scale=600, ROI Align)
 
-model    | #GPUs | batch size | lr  | lr_decay | max_epoch  |  time/epoch | mem/GPU | mAP
----------|-------|------------|-----|----------|------------|-------------|---------|-----
-Res-18   | 1     | 1          | 1e-3| 5        | 7          |  0.21 hr    | 1249 MB | 68.0
-Res-18   | 1     | 6          | 1e-3| 5        | 7          |  0.18 hr    | 4993 MB | 54.7
-Res-34   | 1     | 1          | 1e-3| 5        | 7          |  0.29 hr    | 1441 MB | 72.8
-Res-34   | 1     | 6          | 1e-3| 5        | 7          |  0.24 hr    | 4813 MB | 67.4
-Res-50   | 1     | 1          | 1e-3| 5        | 7          |  0.38 hr    | 1965 MB | 70.9
-Res-50   | 1     | 6          | 1e-3| 5        | 7          |  0.35 hr    | 7469 MB | 64.1 
-Res-101  | 1     | 1          | 1e-3| 5        | 7          |  0.42 hr    | 3221 MB | 73.2  
-Res-101  | 1     | 6          | 1e-3| 5        | 7          |  0.33 hr    | 11925MB | 69.0   
-Res-152  | 1     | 1          | 1e-3| 5        | 7          |  0.57 hr    | 4663 MB | 74.3  
-Res-152  | 1     | 2          | 1e-3| 5        | 6          |  0.45 hr    | 7387 MB | 73.8 
+model    | lr_inti | lr_gama | max_epoch | time/epoch | mem/GPU(train)  |  time/img | mem/GPU(inference) | mAP
+---------|---------|---------|-----------|------------|-----------------|-----------|--------------------|-----
+Res-18   |  1e-3   |  0.618  |     20    |  0.21 hr   | 1249 MB         |  0.21 hr  | 1249 MB            | 68.0
+Res-34   |  1e-3   |  0.618  |     20    |  0.29 hr   | 1441 MB         |  0.29 hr  | 1441 MB            | 72.8
+Res-50   |  1e-3   |  0.618  |     20    |  0.38 hr   | 1965 MB         |  0.38 hr  | 1965 MB            | 70.9
+Res-101  |  1e-3   |  0.618  |     20    |  0.42 hr   | 3221 MB         |  0.42 hr  | 3221 MB            | 73.2   
+Res-152  |  1e-3   |  0.618  |     20    |  0.57 hr   | 4663 MB         |  0.57 hr  | 4663 MB            | 74.3  
 
-* Our pre-trained model weight can simply import via torchvision.
+* Our training only use one batch size for better performance.
+* Our pre-trained model weight simply import via torchvision.
 * If not mentioned, the GPU we used is NVIDIA Titan X Pascal (12GB).
 
 ## Preparation
