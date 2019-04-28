@@ -34,7 +34,7 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 import pdb
 import pynvml
-from custom_operations.custom_check import constraint_check
+from custom_operations.custom_check import CustomChecker
 from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful
 
 
@@ -97,6 +97,9 @@ def parse_args():
     parser.add_argument('--gpu_id', dest='gpu_id',
                         help='which gpu is used',
                         default=0, type=int)
+    parser.add_argument('--video_dir', dest='video_dir',
+                        help='directory to load video for demo',
+                        default="video")
 
     args = parser.parse_args()
     return args
@@ -311,7 +314,7 @@ if __name__ == '__main__':
     vis = False
 
     webcam_num = args.webcam_num
-    video_file_name = args.video_file_name
+    video_file_name = os.path.join(args.video_dir, args.video_file_name)
     # Set up webcam or get image from video
     if webcam_num >= 0:
         cap = cv2.VideoCapture(webcam_num)
@@ -320,7 +323,6 @@ if __name__ == '__main__':
     else:
         # use opencv open the video
         cap = cv2.VideoCapture(video_file_name)
-        # cap = cv2.VideoCapture('videocapture.avi')
         num_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         print('num_frame: ', num_frame)
         num_images = num_frame
@@ -332,7 +334,8 @@ if __name__ == '__main__':
     # point out how to encode videos
     # I420-avi=>cv2.cv.CV_FOURCC('X','2','6','4');
     # MP4=>cv2.cv.CV_FOURCC('M', 'J', 'P', 'G')
-    videowriter = cv2.VideoWriter('video_det.avi', cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'), fps, size)
+    result_path = os.path.join(args.video_dir, args.video_file_name[:-4] + "_det.avi")
+    videowriter = cv2.VideoWriter(result_path, cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'), fps, size)
 
     print('Loaded Photo: {} images.'.format(num_images))
 
@@ -343,7 +346,10 @@ if __name__ == '__main__':
     meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
     print('GPU memery used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'before img itr')
     # pynvml.nvmlShutdown()
-
+    
+    # 区域检测器
+    custom_checker = CustomChecker('./cfgs/video_defult.txt')
+    
     total_time_list = []  # 预设的空值
     detect_time_list = []  # 预设空值
     nms_time_list = []  # 预设空值
@@ -485,7 +491,9 @@ if __name__ == '__main__':
         # 绘制图形与文字
         # plot box and label
         im2show = np.copy(im_bgr)
-        im2show, all_cls_dets = constraint_check(im2show, all_cls_dets)
+        # regional check
+        if webcam_num < 0:
+            im2show, all_cls_dets = custom_checker.constraint_check(im2show, all_cls_dets)
         if len(all_cls_dets):  # no value check
             for j in range(1, len(pascal_classes)):
                 cls_dets = all_cls_dets[j - 1]

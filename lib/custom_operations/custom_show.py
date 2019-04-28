@@ -56,8 +56,8 @@ def vis_detections_beautiful(im, class_name, dets, thresh=0.8):
 
 def vis_text_beautiful(im, str_list):
     """Visual debugging of detections."""
-    im_w = im.shape[0]
-    im_h = im.shape[1]
+    im_h = im.shape[0]
+    im_w = im.shape[1]
 
     show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
     # print(show_scale)
@@ -67,8 +67,8 @@ def vis_text_beautiful(im, str_list):
 
     file_name = file_name.split('/')[1] + '/' + file_name.split('/')[3][:-4]
 
-    show_string_1 = 'device: %s  mem: %.3f G / %.3f G  model: %s' % (gpu_name, mem_used, mem_total,
-file_name)
+    show_string_1 = 'device: %s  mem: %.3f G / %.3f G  model: %s  size: %d * %d' % (gpu_name, mem_used, mem_total,
+file_name, im_w, im_h)
     show_string_2 = 'detect: %.3fs    nms: %.3fs    total: %.3fs    FPS: %.3f' % (detect_time_avg, nms_time_avg,
                                                                                   total_time_avg, frame_rate_avg)
 

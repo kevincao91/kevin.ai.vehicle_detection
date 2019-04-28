@@ -30,7 +30,7 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 import pdb
 import pynvml
-from custom_operations.custom_check import constraint_check
+from custom_operations.custom_check import CustomChecker
 from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful
 
 
@@ -162,9 +162,12 @@ def _get_image_blob(im):
 
 if __name__ == '__main__':
 
+    # 获取指令参数
+    args = parse_args()
+
     # 显卡信息获取
     # 这里的0是用的GPU id
-    gpu_id = 0
+    gpu_id = args.gpu_id
     pynvml.nvmlInit()
     print("============= Driver Information =============")
     driver_version = pynvml.nvmlSystemGetDriverVersion()
@@ -183,8 +186,6 @@ if __name__ == '__main__':
         gpu_info_list.append([i, gpu_name, mem_used, mem_total])
         print("Device %d :  %s   %.6f G / %.6f G" % (i, gpu_name, mem_used, mem_total)) # 具体是什么显卡
     print("==============================================")
- 
-    args = parse_args()
 
     print('Called with args:')
     print(args)
@@ -324,6 +325,9 @@ if __name__ == '__main__':
     print('GPU meme used: %.10f G' % (meminfo.used / (1024 * 1024 * 1024)), 'before img itr')
     # pynvml.nvmlShutdown()
 
+    # 区域检测器
+    custom_checker = CustomChecker('./cfgs/img_defult.txt')
+
     total_time_list = []  # 预设的空值
     detect_time_list = []  # 预设空值
     nms_time_list = []  # 预设空值
@@ -460,7 +464,9 @@ if __name__ == '__main__':
         # 绘制图形与文字
         # plot box and label
         im2show = np.copy(im_bgr)
-        im2show, all_cls_dets = constraint_check(im2show, all_cls_dets)
+        # regional check
+        if webcam_num < 0:
+            im2show, all_cls_dets = custom_checker.constraint_check(im2show, all_cls_dets)
         if len(all_cls_dets):    # no value check
             for j in range(1, len(pascal_classes)):
                 cls_dets = all_cls_dets[j-1]
