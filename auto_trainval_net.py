@@ -4,10 +4,6 @@
 # Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import _init_paths
 import os
 import sys
@@ -31,7 +27,6 @@ from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
     adjust_learning_rate, save_checkpoint, clip_gradient
 
-from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
 
@@ -39,7 +34,7 @@ def parse_args():
     """
   Parse input arguments
   """
-    parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+    parser = argparse.ArgumentParser(description='Train a Faster R-CNN network')
     # parser.add_argument('--dataset', dest='dataset',
     #                     help='training dataset',
     #                     default='pascal_voc', type=str)
@@ -166,6 +161,10 @@ if __name__ == '__main__':
         args.imdb_name = "voc_car_2007_trainval"
         args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    elif args.dataset == "voc_car_2009":
+        args.imdb_name = "voc_car_2009_trainval"
+        args.imdbval_name = "voc_car_2009_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     elif args.dataset == "voc_car_2010":
         args.imdb_name = "voc_car_2010_trainval"
         args.imdbval_name = "voc_car_2010_test"
@@ -241,9 +240,7 @@ if __name__ == '__main__':
         cfg.CUDA = True
 
     # initilize the network here.
-    if args.net == 'vgg16':
-        fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic)
-    elif args.net == 'res101':
+    if args.net == 'res101':
         fasterRCNN = resnet(imdb.classes, 101, pretrained=True, class_agnostic=args.class_agnostic)
     elif args.net == 'res18':
         fasterRCNN = resnet(imdb.classes, 18, pretrained=True, class_agnostic=args.class_agnostic)
@@ -311,7 +308,7 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',
                                                            factor=0.618,
-                                                           patience=15,
+                                                           patience=5,
                                                            verbose=True,
                                                            threshold=0.005,
                                                            threshold_mode='rel',
@@ -350,8 +347,6 @@ if __name__ == '__main__':
             # backward
             optimizer.zero_grad()
             loss.backward()
-            if args.net == "vgg16":
-                clip_gradient(fasterRCNN, 10.)
             optimizer.step()
 
             if step % args.disp_interval == 0:
@@ -410,7 +405,8 @@ if __name__ == '__main__':
         # 达到最小lr，跳出
         lr_now = [group['lr'] for group in optimizer.param_groups][0]
         print('监测 lr : ', lr_now)
-        if lr_now <= 1e-08:
+        if lr_now <= 0.000001:   # lr  training with lr from 1e-03 to 1e-06
+            print('training over.')
             break
 
     if args.use_tfboard:

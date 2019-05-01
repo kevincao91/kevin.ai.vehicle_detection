@@ -4,9 +4,6 @@
 # Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import _init_paths
 import os
@@ -39,7 +36,7 @@ def parse_args():
     """
   Parse input arguments
   """
-    parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+    parser = argparse.ArgumentParser(description='Train a Faster R-CNN network')
     # parser.add_argument('--dataset', dest='dataset',
     #                     help='training dataset',
     #                     default='pascal_voc', type=str)
@@ -165,6 +162,10 @@ if __name__ == '__main__':
     elif args.dataset == "voc_car_2007":
         args.imdb_name = "voc_car_2007_trainval"
         args.imdbval_name = "voc_car_2007_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    elif args.dataset == "voc_car_2009":
+        args.imdb_name = "voc_car_2009_trainval"
+        args.imdbval_name = "voc_car_2009_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     elif args.dataset == "voc_car_2010":
         args.imdb_name = "voc_car_2010_trainval"
