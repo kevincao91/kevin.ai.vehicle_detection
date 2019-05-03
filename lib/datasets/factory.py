@@ -5,9 +5,6 @@
 # --------------------------------------------------------
 
 """Factory method for easily getting imdbs by name."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 __sets = {}
 from datasets.pascal_voc import pascal_voc
@@ -15,8 +12,8 @@ from datasets.pascal_voc_car import pascal_voc_car
 
 import numpy as np
 
-# Set up voc_face_<year>_<split>
-for year in ['2007', '2010']:
+# Set up voc_car_<year>_<split>
+for year in ['2007', '2009', '2010']:
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_car_{}_{}'.format(year, split)
         __sets[name] = (lambda split=split, year=year: pascal_voc_car(split, year))

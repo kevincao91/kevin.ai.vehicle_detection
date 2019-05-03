@@ -317,19 +317,7 @@ class pascal_voc_car(imdb):
             with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                 pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
-        print('~~~~~~~~')
-        print('Results:')
-        for ap in aps:
-            print('{:.3f}'.format(ap))
-        print('{:.3f}'.format(np.mean(aps)))
-        print('~~~~~~~~')
-        print('')
-        print('--------------------------------------------------------------')
-        print('Results computed with the **unofficial** Python eval code.')
-        print('Results should be very close to the official MATLAB eval code.')
-        print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
-        print('-- Thanks, The Management')
-        print('--------------------------------------------------------------')
+        return np.mean(aps)
 
     def _do_matlab_eval(self, output_dir='output'):
         print('-----------------------------------------------------')
@@ -348,7 +336,7 @@ class pascal_voc_car(imdb):
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_voc_results_file(all_boxes)
-        self._do_python_eval(output_dir)
+        maps = self._do_python_eval(output_dir)
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)
         if self.config['cleanup']:
@@ -357,6 +345,7 @@ class pascal_voc_car(imdb):
                     continue
                 filename = self._get_voc_results_file_template().format(cls)
                 os.remove(filename)
+        return maps
 
     def competition_mode(self, on):
         if on:
