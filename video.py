@@ -100,7 +100,11 @@ def parse_args():
     parser.add_argument('--video_dir', dest='video_dir',
                         help='directory to load video for demo',
                         default="video")
-
+    # refine
+    parser.add_argument('--refine', dest='refine',
+                        help='whether use refine anchor',
+                        action='store_true')
+                        
     args = parser.parse_args()
     return args
 
@@ -220,12 +224,14 @@ if __name__ == '__main__':
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-    elif args.dataset == "voc_car_2010":
-        cfg_from_file("cfgs/voc_car_2010.yml")
-    else:
-        pass
+    if args.dataset:
+        if args.refine:
+            print('refine')
+            cfg_file_name = 'cfgs/{}_refine.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
+        else:
+            cfg_file_name = 'cfgs/{}.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
 
     cfg.USE_GPU_NMS = args.cuda
 

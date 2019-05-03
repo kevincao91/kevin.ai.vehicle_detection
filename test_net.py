@@ -4,10 +4,6 @@
 # Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import _init_paths
 import os
 import sys
@@ -83,6 +79,10 @@ def parse_args():
     parser.add_argument('--vis', dest='vis',
                         help='visualization mode',
                         action='store_true')
+    # refine
+    parser.add_argument('--refine', dest='refine',
+                        help='whether use refine anchor',
+                        action='store_true')
     args = parser.parse_args()
     return args
 
@@ -110,6 +110,10 @@ if __name__ == '__main__':
         args.imdb_name = "voc_car_2007_trainval"
         args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
+    elif args.dataset == "voc_car_2009":
+        args.imdb_name = "voc_car_2009_trainval"
+        args.imdbval_name = "voc_car_2009_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
     elif args.dataset == "voc_car_2010":
         args.imdb_name = "voc_car_2010_trainval"
         args.imdbval_name = "voc_car_2010_test"
@@ -126,12 +130,14 @@ if __name__ == '__main__':
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-    elif args.dataset == "voc_car_2010":
-        cfg_from_file("cfgs/voc_car_2010.yml")
-    else:
-        pass
+    if args.dataset:
+        if args.refine:
+            print('refine')
+            cfg_file_name = 'cfgs/{}_refine.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
+        else:
+            cfg_file_name = 'cfgs/{}.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
 
     print('Using config:')
     pprint.pprint(cfg)
@@ -203,6 +209,7 @@ if __name__ == '__main__':
     max_per_image = 100
 
     vis = args.vis
+    vis = False
 
     if vis:
         thresh = 0.05
@@ -215,7 +222,7 @@ if __name__ == '__main__':
                  for _ in range(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, save_name)
-    dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
+    dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1,
                              imdb.num_classes, training=False, normalize=False)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1,
                                              shuffle=False, num_workers=0,
@@ -310,12 +317,12 @@ if __name__ == '__main__':
         misc_toc = time.time()
         nms_time = misc_toc - misc_tic
 
-        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
+        sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r'
                          .format(i + 1, num_images, detect_time, nms_time))
         sys.stdout.flush()
 
         if vis:
-            cv2.imwrite('result.png', im2show)
+            cv2.imwrite('result.png' % i, im2show)
             pdb.set_trace()
             # cv2.imshow('test', im2show)
             # cv2.waitKey(0)

@@ -90,7 +90,10 @@ def parse_args():
     parser.add_argument('--gpu_id', dest='gpu_id',
                         help='which gpu is used',
                         default=0, type=int)
-
+    # refine
+    parser.add_argument('--refine', dest='refine',
+                        help='whether use refine anchor',
+                        action='store_true')
     args = parser.parse_args()
     return args
 
@@ -211,12 +214,14 @@ if __name__ == '__main__':
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-    elif args.dataset == "voc_car_2010":
-        cfg_from_file("cfgs/voc_car_2010.yml")
-    else:
-        pass
+    if args.dataset:
+        if args.refine:
+            print('refine')
+            cfg_file_name = 'cfgs/{}_refine.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
+        else:
+            cfg_file_name = 'cfgs/{}.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
 
     cfg.USE_GPU_NMS = args.cuda
 
@@ -234,9 +239,7 @@ if __name__ == '__main__':
                              'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
     # initilize the network here.
-    if args.net == 'vgg16':
-        fasterRCNN = vgg16(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic)
-    elif args.net == 'res101':
+    if args.net == 'res101':
         fasterRCNN = resnet(pascal_classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
     elif args.net == 'res18':
         fasterRCNN = resnet(pascal_classes, 18, pretrained=False, class_agnostic=args.class_agnostic)
@@ -465,8 +468,8 @@ if __name__ == '__main__':
         # plot box and label
         im2show = np.copy(im_bgr)
         # regional check
-        if webcam_num < 0:
-            im2show, all_cls_dets = custom_checker.constraint_check(im2show, all_cls_dets)
+        # if webcam_num < 0:
+        #     im2show, all_cls_dets = custom_checker.constraint_check(im2show, all_cls_dets)
         if len(all_cls_dets):    # no value check
             for j in range(1, len(pascal_classes)):
                 cls_dets = all_cls_dets[j-1]

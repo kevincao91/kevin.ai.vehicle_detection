@@ -4,10 +4,6 @@
 # Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import _init_paths
 import os
 import sys
@@ -39,7 +35,7 @@ def parse_args():
     """
   Parse input arguments
   """
-    parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+    parser = argparse.ArgumentParser(description='Train a Faster R-CNN network')
     # parser.add_argument('--dataset', dest='dataset',
     #                     help='training dataset',
     #                     default='pascal_voc', type=str)
@@ -120,7 +116,11 @@ def parse_args():
     parser.add_argument('--use_tfb', dest='use_tfboard',
                         help='whether use tensorboard',
                         action='store_true')
-
+    # refine
+    parser.add_argument('--refine', dest='refine',
+                        help='whether use refine anchor',
+                        action='store_true')
+                        
     args = parser.parse_args()
     return args
 
@@ -166,6 +166,10 @@ if __name__ == '__main__':
         args.imdb_name = "voc_car_2007_trainval"
         args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+    elif args.dataset == "voc_car_2009":
+        args.imdb_name = "voc_car_2009_trainval"
+        args.imdbval_name = "voc_car_2009_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
     elif args.dataset == "voc_car_2010":
         args.imdb_name = "voc_car_2010_trainval"
         args.imdbval_name = "voc_car_2010_test"
@@ -182,12 +186,14 @@ if __name__ == '__main__':
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-    elif args.dataset == "voc_car_2010":
-        cfg_from_file("cfgs/voc_car_2010.yml")
-    else:
-        pass
+    if args.dataset:
+        if args.refine:
+            print('refine')
+            cfg_file_name = 'cfgs/{}_refine.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
+        else:
+            cfg_file_name = 'cfgs/{}.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
 
     print('Using config:')
     pprint.pprint(cfg)

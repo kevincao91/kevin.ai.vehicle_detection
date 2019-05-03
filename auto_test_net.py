@@ -4,10 +4,6 @@
 # Written by Kevin Cao, based on code from Jianwei Yang
 # --------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import _init_paths
 import os
 import sys
@@ -29,28 +25,27 @@ from model.rpn.bbox_transform import clip_boxes
 # from model.nms.nms_wrapper import nms
 from model.roi_layers import nms
 from model.rpn.bbox_transform import bbox_transform_inv
-from model.utils.net_utils import save_net, load_net, vis_detections
-from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
 import pdb
 import glob
+import matplotlib.pyplot as plt
 
 
 def parse_args():
     """
   Parse input arguments
   """
-    parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+    parser = argparse.ArgumentParser(description='Train a Faster R-CNN network')
     parser.add_argument('--dataset', dest='dataset',
                         help='training dataset',
-                        default='pascal_voc', type=str)
+                        default='voc_car_2010', type=str)
     parser.add_argument('--cfg', dest='cfg_file',
                         help='optional config file',
-                        default='cfgs/vgg16.yml', type=str)
+                        default='cfgs/res18.yml', type=str)
     parser.add_argument('--net', dest='net',
-                        help='vgg16, res50, res101, res152',
-                        default='res101', type=str)
+                        help='res18, res34, res50, res101, res152',
+                        default='res18', type=str)
     parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
@@ -74,16 +69,15 @@ def parse_args():
                         default=0, type=int)
     parser.add_argument('--checksession', dest='checksession',
                         help='checksession to load model',
-                        default=1, type=int)
-    parser.add_argument('--checkepoch', dest='checkepoch',
-                        help='checkepoch to load network',
-                        default=1, type=int)
-    parser.add_argument('--checkpoint', dest='checkpoint',
-                        help='checkpoint to load network',
-                        default=10021, type=int)
+                        default=9, type=int)
     parser.add_argument('--vis', dest='vis',
                         help='visualization mode',
                         action='store_true')
+    # refine
+    parser.add_argument('--refine', dest='refine',
+                        help='whether use refine anchor',
+                        action='store_true')
+                        
     args = parser.parse_args()
     return args
 
@@ -111,6 +105,10 @@ if __name__ == '__main__':
         args.imdb_name = "voc_car_2007_trainval"
         args.imdbval_name = "voc_car_2007_test"
         args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
+    elif args.dataset == "voc_car_2009":
+        args.imdb_name = "voc_car_2009_trainval"
+        args.imdbval_name = "voc_car_2009_test"
+        args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
     elif args.dataset == "voc_car_2010":
         args.imdb_name = "voc_car_2010_trainval"
         args.imdbval_name = "voc_car_2010_test"
@@ -127,15 +125,19 @@ if __name__ == '__main__':
     if args.cfg_file is not None:
         cfg_from_file(args.cfg_file)
 
-    if args.dataset == "voc_car_0710":
-        cfg_from_file("cfgs/voc_car_0710.yml")
-    elif args.dataset == "voc_car_2010":
-        cfg_from_file("cfgs/voc_car_2010.yml")
-    else:
-        pass
+    if args.dataset:
+        if args.refine:
+            print('refine')
+            cfg_file_name = 'cfgs/{}_refine.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
+        else:
+            cfg_file_name = 'cfgs/{}.yml'.format(args.dataset)
+            cfg_from_file(cfg_file_name)
 
     print('Using config:')
     pprint.pprint(cfg)
+
+    vis = args.vis
 
     cfg.TRAIN.USE_FLIPPED = False
     imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdbval_name, False)
@@ -151,16 +153,17 @@ if __name__ == '__main__':
     # find all session files
     load_file_path_list = []
     for file_path in glob.glob(input_dir + '/' + find_str + '*.pth'):
-        load_file_path_list.append(file_path)
+        load_file_path_list.append([int(file_path.split('/')[-1].split('_')[3]), file_path])
     print('find %d pkl files.' % len(load_file_path_list))
 
-    for load_name in load_file_path_list:
-        print('test file: ', load_name)
+    load_file_path_list.sort()
+
+    result_list = []
+    for idx, load_name in load_file_path_list:
+        print('test file %d : %s' % (idx, load_name))
 
         # initilize the network here.
-        if args.net == 'vgg16':
-            fasterRCNN = vgg16(imdb.classes, pretrained=False, class_agnostic=args.class_agnostic)
-        elif args.net == 'res101':
+        if args.net == 'res101':
             fasterRCNN = resnet(imdb.classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
         elif args.net == 'res18':
             fasterRCNN = resnet(imdb.classes, 18, pretrained=False, class_agnostic=args.class_agnostic)
@@ -210,13 +213,7 @@ if __name__ == '__main__':
 
         start = time.time()
         max_per_image = 100
-
-        vis = args.vis
-
-        if vis:
-            thresh = 0.05
-        else:
-            thresh = 0.0
+        thresh = 0.0
 
         save_name = 'faster_rcnn_10'
         num_images = len(imdb.image_index)
@@ -246,10 +243,8 @@ if __name__ == '__main__':
             num_boxes.data.resize_(data[3].size()).copy_(data[3])
 
             det_tic = time.time()
-            rois, cls_prob, bbox_pred, \
-            rpn_loss_cls, rpn_loss_box, \
-            RCNN_loss_cls, RCNN_loss_bbox, \
-            rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+            rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_box, RCNN_loss_cls, RCNN_loss_bbox, rois_label =\
+                fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
             scores = cls_prob.data
             boxes = rois.data[:, :, 1:5]
@@ -281,9 +276,6 @@ if __name__ == '__main__':
             det_toc = time.time()
             detect_time = det_toc - det_tic
             misc_tic = time.time()
-            if vis:
-                im = cv2.imread(imdb.image_path_at(i))
-                im2show = np.copy(im)
             for j in range(1, imdb.num_classes):
                 inds = torch.nonzero(scores[:, j] > thresh).view(-1)
                 # if there is det
@@ -300,8 +292,6 @@ if __name__ == '__main__':
                     cls_dets = cls_dets[order]
                     keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
                     cls_dets = cls_dets[keep.view(-1).long()]
-                    if vis:
-                        im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3)
                     all_boxes[j][i] = cls_dets.cpu().numpy()
                 else:
                     all_boxes[j][i] = empty_array
@@ -323,17 +313,36 @@ if __name__ == '__main__':
                              .format(i + 1, num_images, detect_time, nms_time))
             sys.stdout.flush()
 
-            if vis:
-                cv2.imwrite('result.png', im2show)
-                pdb.set_trace()
-                # cv2.imshow('test', im2show)
-                # cv2.waitKey(0)
-
         with open(det_file, 'wb') as f:
             pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
         print('Evaluating detections')
-        imdb.evaluate_detections(all_boxes, output_dir)
+        maps = imdb.evaluate_detections(all_boxes, output_dir)
+        result_list.append([idx, load_name, maps])
 
         end = time.time()
-        print("test time: %0.4fs" % (end - start))
+        print("test time: %0.4fs\n" % (end - start))
+
+    if not os.path.exists('./result/'):
+        os .mkdir('./result/')
+
+    # 绘制曲线
+    p1 = [result[0] for result in result_list]  # 序号
+    p2 = [result[2] for result in result_list]  # 值
+
+    max_indx = int(np.argmax(p2))  # max value index
+
+    plt.figure('test result', figsize=(10, 8))
+    plt.plot(p1, p2)  # plot绘制折线图
+    # 最值点显示  实际最值点序号要加1
+    plt.plot(max_indx+1, p2[max_indx], 'ks')
+    show_max = '[' + str(max_indx+1) + ' ' + str(p2[max_indx]) + ']'
+    plt.annotate(show_max, xytext=(max_indx+1, p2[max_indx]), xy=(max_indx+1, p2[max_indx]))
+    save_name_str = './result/session_{}_auto_test_result.jpg'.format(args.checksession)
+    plt.savefig(save_name_str, dpi=300)  # 保存图象
+    plt.close()  # 关闭图表
+
+    if vis:
+        im2show = cv2.imread(save_name_str)
+        cv2.imshow(save_name_str, im2show)
+        cv2.waitKey(0)
