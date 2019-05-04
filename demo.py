@@ -457,8 +457,10 @@ if __name__ == '__main__':
                 # keep = nms(cls_dets, cfg.TEST.NMS, force_cpu=not cfg.USE_GPU_NMS)
                 keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
                 cls_dets = cls_dets[keep.view(-1).long()]
-                # regional_check
+                # 
                 all_cls_dets.append(cls_dets.cpu().numpy())
+            else:
+                all_cls_dets.append([])
 
         nms_toc = time.time()
         nms_time = nms_toc - nms_tic
@@ -467,9 +469,10 @@ if __name__ == '__main__':
         # 绘制图形与文字
         # plot box and label
         im2show = np.copy(im_bgr)
-        # regional check
-        # if webcam_num < 0:
-        #     im2show, all_cls_dets = custom_checker.constraint_check(im2show, all_cls_dets)
+        # regional check and identify check
+        if webcam_num < 0:
+            # im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
+            im2show, all_cls_dets = custom_checker.identify_check(im2show, all_cls_dets)
         if len(all_cls_dets):    # no value check
             for j in range(1, len(pascal_classes)):
                 cls_dets = all_cls_dets[j-1]
