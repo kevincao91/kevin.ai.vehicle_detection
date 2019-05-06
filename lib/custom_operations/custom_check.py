@@ -18,6 +18,7 @@ from custom_operations.custom_show import vis_text_beautiful, vis_detections_bea
 class CustomChecker:
 
     def __init__(self, regional_file_path):
+        self.thresh = 0.8
         self.smooth = False
         self.identify = True
         self.all_cls_dets_time_seq = []
@@ -73,6 +74,18 @@ class CustomChecker:
         return line_point_list
 
 
+    def thresh_check(self, all_cls_dets):
+
+        for j in range(len(all_cls_dets)):
+            cls_dets = all_cls_dets[j]
+            if cls_dets.any():    # no value check
+                keep_idx = [idx for idx, det in enumerate(cls_dets) if det[-1]>self.thresh]
+                cls_dets = cls_dets[keep_idx]
+                all_cls_dets[j] = cls_dets
+
+        return all_cls_dets
+
+
     def regional_check(self, im2show, all_cls_dets):
 
         # 
@@ -102,23 +115,29 @@ class CustomChecker:
         all_cls_speeds = []
         # get center by class
         for j in range(len(all_cls_dets)):
-            # print('cls:', j)
-            cls_dets = all_cls_dets[j]
-            if cls_dets.any():    # no value check
-                cls_dets_center = self.get_rec_center(cls_dets)
-                # plot det center
-                for dets_center in cls_dets_center:
-                    cv2.circle(im2show, dets_center, point_size, color1, thickness)
             # plot idf center
             cls_idf_center = self.idf_center_list[j]
             for idf_center in cls_idf_center:
                 idf, xx, yy, count, speed = idf_center
                 if idf and count:
                     cv2.circle(im2show, (xx, yy), 3, color2, thickness)
+            # print('cls:', j)
+            cls_dets = all_cls_dets[j]
+
+            # print(cls_dets)            
+            if cls_dets.any():    # no value check
+                cls_dets_center = self.get_rec_center(cls_dets)
+                # plot det center
+                for dets_center in cls_dets_center:
+                    cv2.circle(im2show, dets_center, point_size, color1, thickness)
+            else:
+                cls_dets_center = []
             # identify label
-            labels, speeds = self.identify_label(j, cls_dets_center)  # UnboundLocalError: local variable 'cls_dets_center' referenced before assignment
+            labels, speeds = self.identify_label(j, cls_dets_center)
             all_cls_labels.append(labels)
             all_cls_speeds.append(speeds)
+
+                
         # move path save
         self.path_save()
         # plot path line
@@ -134,6 +153,34 @@ class CustomChecker:
         #             cv2.putText(im2show, str(label), cls_dets_center[i], f_s, t_s, color3, thickness=3)
         pass
         return im2show, all_cls_dets, all_cls_labels, all_cls_speeds
+
+    def path_predict(self, im2show):
+        
+        color = (100, 100, 100)
+        speed_color_list = [(200, 200, 0), (0, 200, 200), (0, 0, 200), (0, 0, 255)]
+        # print('show ====>', self.path_speed_dict)
+        for key in self.path_speed_dict.keys():
+            path_speed_list = self.path_speed_dict[key]
+            if len(path_speed_list) < 2:
+                continue
+            # get history
+            x_n0, y_n0, speed_n0 = path_speed_list[-1]
+            x_n1, y_n1, speed_n1 = path_speed_list[-2]
+            # predict value
+            mutiply = 5
+            x_pre = x_n0 + mutiply * (x_n0 - x_n1)
+            y_pre = y_n0 + mutiply * (y_n0 - y_n1)
+            # speed_pre = 2 * speed_n0 - speed_n1
+            
+            # plot predict
+            point1 = (x_n0, y_n0)
+            point2 = (x_pre, y_pre)
+            # speed_avg = (speed_n0 + speed_pre) / 2
+            cv2.line(im2show, point1, point2, color, thickness=5)
+        
+        return im2show
+
+
 
     def path_show(self, im2show):
     
@@ -198,6 +245,28 @@ class CustomChecker:
 
 
     def identify_label(self, cls_idx, cls_dets_center):
+        # no value  == not car detected
+        if not cls_dets_center:
+            cls_idf_center = self.idf_center_list[cls_idx]
+            for idf_idx, idf_center in enumerate(cls_idf_center):
+                # print('idf_center', idf_center)
+                idf, x_c, y_c, count, speed = idf_center
+                if count<=0 or idf==0:   # check label is avalible
+                    # print('continue!')
+                    continue
+                # update
+                count = count - 1
+                speed = 0
+                cls_idf_center[idf_idx] = [idf, x_c, y_c, count, speed]
+            self.idf_center_list[cls_idx] = cls_idf_center
+            # print('finally modifity labels: ', labels)
+            # print('finally modifity cls_idf_center: ', self.idf_center_list[cls_idx])
+            labels = []
+            speeds = []
+            pass
+            return labels, speeds
+            
+        # have value  == have car detected
         cls_idf_center = self.idf_center_list[cls_idx]
         labels = np.zeros((len(cls_dets_center),), dtype=np.int)
         speeds = np.zeros((len(cls_dets_center),), dtype=np.float32)

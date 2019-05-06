@@ -86,12 +86,18 @@ def parse_args():
     parser.add_argument('--lr', dest='lr',
                         help='starting learning rate',
                         default=0.001, type=float)
-    parser.add_argument('--lr_decay_step', dest='lr_decay_step',
-                        help='step to do learning rate decay, unit is epoch',
-                        default=5, type=int)
+    # parser.add_argument('--lr_decay_step', dest='lr_decay_step', 
+    #                     help='step to do learning rate decay, unit is epoch',
+    #                     default=5, type=int)
+    parser.add_argument('--lr_decay_patience', dest='lr_decay_patience',
+                        help='max patience step to do learning rate decay',
+                        default=15, type=int)
     parser.add_argument('--lr_decay_gamma', dest='lr_decay_gamma',
                         help='learning rate decay ratio',
-                        default=0.1, type=float)
+                        default=0.618, type=float)
+    parser.add_argument('--lr_end', dest='lr_end',
+                        help='end learning rate',
+                        default=0.00001, type=float)
 
     # set training session
     parser.add_argument('--s', dest='session',
@@ -313,8 +319,8 @@ if __name__ == '__main__':
     # 设置学习率下降策略
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            mode='min',
-                                                           factor=0.618,
-                                                           patience=5,
+                                                           factor=args.lr_decay_gamma,
+                                                           patience=args.lr_decay_patience,
                                                            verbose=True,
                                                            threshold=0.005,
                                                            threshold_mode='rel',
@@ -411,7 +417,7 @@ if __name__ == '__main__':
         # 达到最小lr，跳出
         lr_now = [group['lr'] for group in optimizer.param_groups][0]
         print('监测 lr : ', lr_now)
-        if lr_now <= 0.000001:   # lr  training with lr from 1e-03 to 1e-06
+        if lr_now <= args.lr_end:   # lr  training with lr from lr to lr_end
             print('training over.')
             break
 

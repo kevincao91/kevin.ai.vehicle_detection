@@ -499,17 +499,18 @@ if __name__ == '__main__':
         # 绘制图形与文字
         # plot box and label
         im2show = np.copy(im_bgr)
-        # regional check and identify check
-        if webcam_num < 0:
-            im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
-            if len(all_cls_dets):   # no value check
-                im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
-        if len(all_cls_dets):    # no value check
-            for j in range(1, len(pascal_classes)):
+        # thresh check // regional check // identify check // path predict
+        all_cls_dets = custom_checker.thresh_check(all_cls_dets)
+        im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
+        im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
+        im2show = custom_checker.path_predict(im2show)
+        # plot box and label
+        for j in range(1, len(pascal_classes)):
+            if len(all_cls_dets[j-1]):    # no value check
                 cls_dets = all_cls_dets[j-1]
                 cls_labels = all_cls_labels[j-1]
                 cls_speeds = all_cls_speeds[j-1]
-                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds, thresh=0.8)
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds=False)
         # plot string
         # model info
         model_name = args.net
