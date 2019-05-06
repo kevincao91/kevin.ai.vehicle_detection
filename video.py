@@ -502,11 +502,14 @@ if __name__ == '__main__':
         # regional check and identify check
         if webcam_num < 0:
             im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
-            im2show, all_cls_dets = custom_checker.identify_check(im2show, all_cls_dets)
-        if len(all_cls_dets):  # no value check
+            if len(all_cls_dets):   # no value check
+                im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
+        if len(all_cls_dets):    # no value check
             for j in range(1, len(pascal_classes)):
-                cls_dets = all_cls_dets[j - 1]
-                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, thresh=0.8)
+                cls_dets = all_cls_dets[j-1]
+                cls_labels = all_cls_labels[j-1]
+                cls_speeds = all_cls_speeds[j-1]
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds, thresh=0.8)
         # plot string
         # model info
         model_name = args.net

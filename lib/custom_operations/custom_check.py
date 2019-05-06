@@ -21,7 +21,12 @@ class CustomChecker:
         self.smooth = False
         self.identify = True
         self.all_cls_dets_time_seq = []
-        self.idf_center_list = [[[0, 0, 0], ]]
+        self.dist_th = 1000
+        self.frame_rate = 24
+        self.center_keep_time = self.frame_rate
+        self.path_keep_time = self.frame_rate
+        self.path_speed_dict = {}
+        self.idf_center_list = [[[0, 0, 0, 0, 0.0], ]]   # idf, x_c, y_c, keep_time, speed
         self.line_point_list = self.get_regional(regional_file_path)
 
     def get_regional(self, regional_file_path):
@@ -87,15 +92,17 @@ class CustomChecker:
         point_size = 1
         color1 = (0, 0, 255) # BGR
         color2 = (0, 255, 0) # BGR
-        color3 = (255, 0, 0) # BGR
-        thickness = 4 # 可以为 0 、4、8
+        color3 = (0, 0, 255) # BGR
+        thickness = 2 # 可以为 0 、4、8
         f_s = cv2.FONT_HERSHEY_SIMPLEX  # 文字字体
-        t_s = 0.8  # 文字大小
+        t_s = 0.6  # 文字大小
         t_t = 2    # 文字线条粗细
 
+        all_cls_labels = []
+        all_cls_speeds = []
         # get center by class
         for j in range(len(all_cls_dets)):
-            print('cls:', j)
+            # print('cls:', j)
             cls_dets = all_cls_dets[j]
             if cls_dets.any():    # no value check
                 cls_dets_center = self.get_rec_center(cls_dets)
@@ -105,46 +112,151 @@ class CustomChecker:
             # plot idf center
             cls_idf_center = self.idf_center_list[j]
             for idf_center in cls_idf_center:
-                idf, xx, yy = idf_center
-                cv2.circle(im2show, (xx, yy), 5, color2, thickness)
+                idf, xx, yy, count, speed = idf_center
+                if idf and count:
+                    cv2.circle(im2show, (xx, yy), 3, color2, thickness)
             # identify label
-            labels = self.identify_label(j, cls_dets_center)
-            #
-            for i, label in enumerate(labels):
-                if label > 0:
-                    # plot label
-                    # cv2.circle(im2show, cls_dets_center[i], 8, color3, thickness)
-                    cv2.putText(im2show, str(label), cls_dets_center[i], f_s, t_s, color3, thickness=1)
+            labels, speeds = self.identify_label(j, cls_dets_center)  # UnboundLocalError: local variable 'cls_dets_center' referenced before assignment
+            all_cls_labels.append(labels)
+            all_cls_speeds.append(speeds)
+        # move path save
+        self.path_save()
+        # plot path line
+        im2show = self.path_show(im2show)
         pass
-        return im2show, all_cls_dets
+        # plot labels
+        # for j in range(len(all_cls_dets)):
+        #     cls_labels = all_cls_labels[j]
+        #     for i, label in enumerate(cls_labels):
+        #         if label > 0:
+        #             # plot label
+        #             # cv2.circle(im2show, cls_dets_center[i], 8, color3, thickness)
+        #             cv2.putText(im2show, str(label), cls_dets_center[i], f_s, t_s, color3, thickness=3)
+        pass
+        return im2show, all_cls_dets, all_cls_labels, all_cls_speeds
+
+    def path_show(self, im2show):
+    
+        speed_color_list = [(200, 200, 0), (0, 200, 200), (0, 0, 200), (0, 0, 255)]
+        # print('show ====>', self.path_speed_dict)
+        for key in self.path_speed_dict.keys():
+            path_speed_list = self.path_speed_dict[key]
+            if len(path_speed_list) < 2:
+                continue
+            for i in range(len(path_speed_list)-1):
+                x1, y1, speed1 = path_speed_list[i]
+                point1 = (x1, y1)
+                x2, y2, speed2 = path_speed_list[i+1]
+                point2 = (x2, y2)
+                speed_avg = (speed1 + speed2) / 2
+                if speed_avg <= 2.0:
+                    color = speed_color_list[0]
+                elif speed_avg <= 4.0:
+                    color = speed_color_list[1]
+                elif speed_avg <= 6.0:
+                    color = speed_color_list[2]
+                else:
+                    color = speed_color_list[3]
+                cv2.line(im2show, point1, point2, color, thickness=3)
+        
+        return im2show
+
+
+    def path_save(self):
+        # print('befor save ====>', self.path_speed_dict)
+        for idx_cls in range(len(self.idf_center_list)):
+            cls_idf_center = self.idf_center_list[idx_cls]
+            # print('cls_idf_center', cls_idf_center)
+            for idf_center in cls_idf_center:
+                idf, xx, yy, count, speed = idf_center
+                # print(idf, xx, yy, count, speed)
+                if not idf:     # not zero label
+                    continue
+                if count:     # is avaliable
+                    # save path
+                    if idf in self.path_speed_dict.keys():
+                        # print('exist')
+                        path_speed_list = self.path_speed_dict[idf]
+                        path_speed_list.append((xx, yy, speed))
+                        # long limit
+                        if len(path_speed_list) > self.path_keep_time:
+                            del path_speed_list[0]
+                        self.path_speed_dict[idf] = path_speed_list
+                    else:
+                        # print('not exist')
+                        self.path_speed_dict[idf] = [(xx, yy, speed)]
+                else:    # not avaliable
+                    # del path
+                    if idf in self.path_speed_dict.keys():
+                        # print('exist not avalible key %d !' % idf)
+                        del self.path_speed_dict[idf]
+                
+                # print(self.path_speed_dict)
+        # print('after save ====>', self.path_speed_dict)
+
+        pass
+
 
     def identify_label(self, cls_idx, cls_dets_center):
         cls_idf_center = self.idf_center_list[cls_idx]
         labels = np.zeros((len(cls_dets_center),), dtype=np.int)
-        print(labels)
-        for idf_center in cls_idf_center:
-            print('idf_center', idf_center)
-            idf, x_c, y_c = idf_center
+        speeds = np.zeros((len(cls_dets_center),), dtype=np.float32)
+        # print('initial labels: ', labels)
+        for idf_idx, idf_center in enumerate(cls_idf_center):
+            # print('idf_center', idf_center)
+            idf, x_c, y_c, count, speed = idf_center
+            if count<=0 or idf==0:   # check label is avalible
+                # print('continue!')
+                continue
+            best_det_idx = -1
+            best_det_dist = 100000000
             for i, det_center in enumerate(cls_dets_center):
-                print('cls_dets_center  ', i, det_center)
+                # print('cls_dets_center  ', i, det_center)
                 xx, yy = det_center
                 dist = (xx-x_c)**2 + (yy-y_c)**2
-                print('dist : ', dist)
-                if dist < 100:
-                    # get exist label
-                    labels[i] = idf
+                # print('dist : ', dist)
+                if dist < best_det_dist:
+                    best_det_dist = dist
+                    best_det_idx = i
+            # print('best_det_dist', best_det_dist)
+            # print('best_det_idx', best_det_idx)
+            # 
+            if best_det_dist < self.dist_th:
+                # get exist label and speed
+                labels[best_det_idx] = idf
+                speed = best_det_dist / self.frame_rate
+                speeds[best_det_idx] = speed
+                xx, yy = cls_dets_center[best_det_idx]
+                x_c = xx
+                y_c = yy
+                # print('find ', 'cls_dets_center  ', best_det_idx, cls_dets_center[best_det_idx], 'like ', 'idf_center', idf_center)
+            # print('after label %d modifity labels: ' % idf, labels)
+            #
+            if idf in labels:
+                # print('idf_center ', idf, '+')
+                if count < self.center_keep_time:
+                    count += 1
+            else:
+                # print('idf_center ', idf, '-')
+                if count > 0:
+                    count -= 1
+            # update 
+            cls_idf_center[idf_idx] = [idf, x_c, y_c, count, speed]
+            # print('update ', 'cls_idf_center  ', [idf, x_c, y_c, count])
+        # update
+        self.idf_center_list[cls_idx] = cls_idf_center
         # add new label
         for i, label in enumerate(labels):
             xx, yy = cls_dets_center[i]
             if label == 0:
                 new_num = cls_idf_center[-1][0] + 1
-                cls_idf_center.append([new_num, xx, yy])
+                cls_idf_center.append([new_num, xx, yy, self.center_keep_time, 0.0])
                 labels[i] = new_num
         self.idf_center_list[cls_idx] = cls_idf_center
-        print(labels)
-        print(self.idf_center_list[cls_idx])
+        # print('finally modifity labels: ', labels)
+        # print('finally modifity cls_idf_center: ', self.idf_center_list[cls_idx])
         pass
-        return labels
+        return labels, speeds
 
     def get_rec_center(self, cls_dets):
         cls_dets_center = []

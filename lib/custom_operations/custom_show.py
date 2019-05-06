@@ -8,15 +8,20 @@
 import cv2
 import numpy as np
 
+  
 
-def vis_detections_beautiful(im, class_name, dets, thresh=0.8):
+def vis_detections_beautiful(im, class_name, dets, labels=False, speeds=False, thresh=0.8):
     """Visual debugging of detections."""
     im_w = im.shape[0]
     im_h = im.shape[1]
-    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
+    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1280) / 1280)
     for i in range(np.minimum(20, dets.shape[0]) - 1, -1, -1):
         bbox = tuple(int(np.round(x)) for x in dets[i, :4])
         score = dets[i, -1]
+        if labels.any():
+            label = labels[i]
+        if speeds.any():
+            speed = speeds[i]
         if score > thresh:
             x1, y1, x2, y2 = bbox
             color1, color2, color3 = (76, 180, 231), (255, 192, 159), (76, 180, 231)
@@ -46,10 +51,22 @@ def vis_detections_beautiful(im, class_name, dets, thresh=0.8):
             # 大框
             cv2.rectangle(im, (x1, y1), (x2, y2), color3, thickness=r_s)
             # 文字
-            cv2.putText(im, '%s' % class_name, (x2 + r_s, y1 - round(r_s / 2) + round(r_h / 2) + t_h), f_s, t_s, color4,
-                        thickness=t_t)
-            cv2.putText(im, '%.3f' % score, (x2 + r_s, y1 - round(r_s / 2) + round(r_h * 3 / 2) + t_h), f_s, t_s,
-                        color5, thickness=t_t)
+            if labels.any():
+                cv2.putText(im, '%s %d' % (class_name, label), (x2 + r_s, y1 - round(r_s / 2) + round(r_h / 2) + t_h), f_s, t_s, color4,
+                            thickness=t_t)
+            else:
+                cv2.putText(im, '%s' % class_name, (x2 + r_s, y1 - round(r_s / 2) + round(r_h / 2) + t_h), f_s, t_s, color4,
+                            thickness=t_t)
+            if speeds.any():
+                if speed > 0.8:
+                    cv2.putText(im, '%.3f' % speed, (x2 + r_s, y1 - round(r_s / 2) + round(r_h * 3 / 2) + t_h), f_s, t_s,
+                                color5, thickness=t_t)
+                else:
+                    cv2.putText(im, 'stop', (x2 + r_s, y1 - round(r_s / 2) + round(r_h * 3 / 2) + t_h), f_s, t_s,
+                                color5, thickness=t_t)
+            else:
+                cv2.putText(im, '%.3f' % score, (x2 + r_s, y1 - round(r_s / 2) + round(r_h * 3 / 2) + t_h), f_s, t_s,
+                            color5, thickness=t_t)
 
     return im
 
@@ -59,7 +76,7 @@ def vis_text_beautiful(im, str_list):
     im_h = im.shape[0]
     im_w = im.shape[1]
 
-    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
+    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1280) / 1280)
     # print(show_scale)
 
     gpu_name, mem_used, mem_total, model_name, file_name, detect_time_avg, nms_time_avg, total_time_avg,\

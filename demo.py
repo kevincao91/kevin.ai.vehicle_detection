@@ -32,6 +32,7 @@ import pdb
 import pynvml
 from custom_operations.custom_check import CustomChecker
 from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful
+import glob
 
 
 def parse_args():
@@ -315,6 +316,15 @@ if __name__ == '__main__':
         num_images = num_frame
     else:
         imglist = os.listdir(args.image_dir)
+        # print(imglist)
+        load_file_path_list = []
+        for file_name in imglist:
+            load_file_path_list.append([int(file_name.split('.')[0]), file_name])
+        # sort
+        load_file_path_list.sort()
+        imglist_sorted = [file_name for idx, file_name in load_file_path_list]
+        print(imglist_sorted)
+        imglist = imglist_sorted
         num_frame = len(imglist)
         num_images = num_frame
 
@@ -350,7 +360,9 @@ if __name__ == '__main__':
             im_rgb = im_bgr[:, :, ::-1]
         # Load the demo image
         else:
-            im_file = os.path.join(args.image_dir, imglist[num_images])
+            image_idx = num_frame - num_images -1
+            # print('image load: ', imglist[image_idx])
+            im_file = os.path.join(args.image_dir, imglist[image_idx])
             # im = cv2.imread(im_file)
             im_rgb = np.array(imread(im_file))
             # rgb -> bgr
@@ -471,12 +483,15 @@ if __name__ == '__main__':
         im2show = np.copy(im_bgr)
         # regional check and identify check
         if webcam_num < 0:
-            # im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
-            im2show, all_cls_dets = custom_checker.identify_check(im2show, all_cls_dets)
+            im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
+            if len(all_cls_dets):   # no value check
+                im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
         if len(all_cls_dets):    # no value check
             for j in range(1, len(pascal_classes)):
                 cls_dets = all_cls_dets[j-1]
-                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, thresh=0.8)
+                cls_labels = all_cls_labels[j-1]
+                cls_speeds = all_cls_speeds[j-1]
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds, thresh=0.8)
         # plot string
         # model info
         model_name = args.net
@@ -512,7 +527,7 @@ if __name__ == '__main__':
                 cv2.imshow('frame', cv2.resize(im2show, None, fx=1.0, fy=1.0))
                 if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
-            result_path = os.path.join(args.image_dir, imglist[num_images][:-4] + "_det.jpg")
+            result_path = os.path.join(args.image_dir, imglist[image_idx][:-4] + "_det.jpg")
             cv2.imwrite(result_path, im2show)
 
         # print sys

@@ -323,9 +323,6 @@ if __name__ == '__main__':
         end = time.time()
         print("test time: %0.4fs\n" % (end - start))
 
-    if not os.path.exists('./result/'):
-        os .mkdir('./result/')
-
     # 绘制曲线
     p1 = [result[0] for result in result_list]  # 序号
     p2 = [result[2] for result in result_list]  # 值
@@ -338,7 +335,7 @@ if __name__ == '__main__':
     plt.plot(max_indx+1, p2[max_indx], 'ks')
     show_max = '[' + str(max_indx+1) + ' ' + str(p2[max_indx]) + ']'
     plt.annotate(show_max, xytext=(max_indx+1, p2[max_indx]), xy=(max_indx+1, p2[max_indx]))
-    save_name_str = './result/session_{}_auto_test_result.jpg'.format(args.checksession)
+    save_name_str = input_dir + '/session_{}_auto_test_result.jpg'.format(args.checksession)
     plt.savefig(save_name_str, dpi=300)  # 保存图象
     plt.close()  # 关闭图表
 
