@@ -155,7 +155,7 @@ python demo.py --net res101 \
 
 Then you will find the detection results in folder $ROOT/images.
 
-**Note the default demo.py merely support pascal_voc categories. You need to change the [line](https://github.com/jwyang/faster-rcnn.pytorch/blob/530f3fdccaa60d05fa068bc2148695211586bd88/demo.py#L156) to adapt your own model.**
+**Note the default demo.py merely support pascal_voc categories. You need to change the [line](https://github.com/kevincao91/kevin.ai.vehicle_detection/blob/master/demo.py#L210) to adapt your own model.**
 
 Below are some detection results:
 
@@ -184,6 +184,14 @@ python video.py --net res101 \
                 --video $VIDEO_NAME
 ```
 The demo is stopped by clicking the image window and then pressing the 'q' key.
+
+**Note the default demo.py merely support pascal_voc categories. You need to change the [line](https://github.com/kevincao91/kevin.ai.vehicle_detection/blob/master/video.py#L219) to adapt your own model.**
+
+Below are some video results:
+
+<div style="color:#0000FF" align="center">
+<img src="video/street_6_det.png" width="860"/>
+</div>
 
 ## Authorship
 

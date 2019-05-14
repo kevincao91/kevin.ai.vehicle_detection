@@ -12,74 +12,48 @@ import time
 import cv2
 import torch
 
-from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful
+from custom_operations.custom_show import vis_text_beautiful, vis_detections_beautiful, vis_count_text
 
 
 class CustomChecker:
 
     def __init__(self, regional_file_path):
-        self.thresh = 0.8
+
         self.smooth = False
         self.identify = True
         self.all_cls_dets_time_seq = []
-        self.dist_th = 1000
+        self.dist_th = 500
         self.frame_rate = 24
+        self.active_limit = self.frame_rate / 3
         self.center_keep_time = self.frame_rate
         self.path_keep_time = self.frame_rate
         self.path_speed_dict = {}
         self.idf_center_list = [[[0, 0, 0, 0, 0.0], ]]   # idf, x_c, y_c, keep_time, speed
         self.line_point_list = self.get_regional(regional_file_path)
+        # 车流
+        self.now_max_label = 0
+        self.car_count_list = []
+        self.max_count_per_count_time = 0
+        self.count_time = 60   # 车流量单位 60s
+        self.count_num_limit = self.count_time * self.frame_rate
 
-    def get_regional(self, regional_file_path):
-        #                      |          \                       /
-        #       -1             |           \                     /   
-        #  ------------     -1 |  1      1  \   -1       -1     /     1
-        #        1             |             \                 /
-        #                      |              \               /    
-        # if direction*y >= direction*(k*x+b):  keep
-        # read point list
-        # for img point
-        line_point_list = []
-
-        with open(regional_file_path, 'r') as fh:
-            lines = fh.readlines()
+    def count_check(self, im2show):
+        self.car_count_list.append(self.now_max_label)
+        if len(self.car_count_list) > self.count_num_limit:
+            del self.car_count_list[0]
+        count_per_count_time = self.car_count_list[-1] - self.car_count_list[0]
+        if count_per_count_time > self.max_count_per_count_time:
+            self.max_count_per_count_time = count_per_count_time
+        im2show = vis_count_text(im2show, [self.now_max_label, count_per_count_time, self.max_count_per_count_time])
         
-        im_w, im_h = int(lines[0].split()[0]), int(lines[0].split()[1])
+        return im2show
 
-        for line in lines[1:]:
-            x1, y1, x2, y2, d = line.split()
-            x1, y1, x2, y2, d = float(x1), float(y1), float(x2), float(y2), int(d)
-            x1 = round(x1*im_w)
-            y1 = round(y1*im_h)
-            x2 = round(x2*im_w)
-            y2 = round(y2*im_h)
-            line_point_list.append((x1, y1, x2, y2, d))
-
-        # for video
-        # line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.50), round(im_h*0.15),  1),
-        #                    ( round(im_w*0.50), round(im_h*0.15), im_w            , round(im_h*0.61),  1),
-        #                    ( im_w            , round(im_h*0.61), im_w            , im_h            , -1),
-        #                    ( im_w            , im_h            , round(im_w*0.26), im_h            , -1),
-        #                    ( round(im_w*0.26), im_h            , 0               , round(im_h*0.61), -1),
-        #                    ( 0               , round(im_h*0.61), 0               , round(im_h*0.15),  1)]
-
-        # for image
-        # line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.60), round(im_h*0.15),  1),
-        #                    ( round(im_w*0.60), round(im_h*0.15), im_w            , round(im_h*0.65),  1),
-        #                    ( im_w            , round(im_h*0.65), im_w            , im_h            , -1),
-        #                    ( im_w            , im_h            , round(im_w/3)   , im_h            , -1),
-        #                    ( round(im_w/3)   , im_h            , 0               , round(im_h/3)   , -1),
-        #                    ( 0               , round(im_h/3)   , 0               , round(im_h*0.15),  1)]
-
-        return line_point_list
-
-
-    def thresh_check(self, all_cls_dets):
+    def thresh_check(self, all_cls_dets, thresh=0.90):
 
         for j in range(len(all_cls_dets)):
             cls_dets = all_cls_dets[j]
             if cls_dets.any():    # no value check
-                keep_idx = [idx for idx, det in enumerate(cls_dets) if det[-1]>self.thresh]
+                keep_idx = [idx for idx, det in enumerate(cls_dets) if det[-1]>thresh]
                 cls_dets = cls_dets[keep_idx]
                 all_cls_dets[j] = cls_dets
 
@@ -105,11 +79,11 @@ class CustomChecker:
         point_size = 1
         color1 = (0, 0, 255) # BGR
         color2 = (0, 255, 0) # BGR
-        color3 = (0, 0, 255) # BGR
+        # color3 = (0, 0, 255) # BGR
         thickness = 2 # 可以为 0 、4、8
-        f_s = cv2.FONT_HERSHEY_SIMPLEX  # 文字字体
-        t_s = 0.6  # 文字大小
-        t_t = 2    # 文字线条粗细
+        # f_s = cv2.FONT_HERSHEY_SIMPLEX  # 文字字体
+        # t_s = 0.6  # 文字大小
+        # t_t = 2    # 文字线条粗细
 
         all_cls_labels = []
         all_cls_speeds = []
@@ -167,7 +141,7 @@ class CustomChecker:
             x_n0, y_n0, speed_n0 = path_speed_list[-1]
             x_n1, y_n1, speed_n1 = path_speed_list[-2]
             # predict value
-            mutiply = 5
+            mutiply = 3
             x_pre = x_n0 + mutiply * (x_n0 - x_n1)
             y_pre = y_n0 + mutiply * (y_n0 - y_n1)
             # speed_pre = 2 * speed_n0 - speed_n1
@@ -217,7 +191,7 @@ class CustomChecker:
             for idf_center in cls_idf_center:
                 idf, xx, yy, count, speed = idf_center
                 # print(idf, xx, yy, count, speed)
-                if not idf:     # not zero label
+                if idf <= 0:     # zero label and nagetivate label
                     continue
                 if count:     # is avaliable
                     # save path
@@ -272,12 +246,12 @@ class CustomChecker:
         speeds = np.zeros((len(cls_dets_center),), dtype=np.float32)
         # print('initial labels: ', labels)
         for idf_idx, idf_center in enumerate(cls_idf_center):
-            # print('idf_center', idf_center)
+            # print('对 idf_center', idf_center, '遍历所有检测框')
             idf, x_c, y_c, count, speed = idf_center
             if count<=0 or idf==0:   # check label is avalible
                 # print('continue!')
                 continue
-            best_det_idx = -1
+            best_det_idx = -100
             best_det_dist = 100000000
             for i, det_center in enumerate(cls_dets_center):
                 # print('cls_dets_center  ', i, det_center)
@@ -299,28 +273,34 @@ class CustomChecker:
                 x_c = xx
                 y_c = yy
                 # print('find ', 'cls_dets_center  ', best_det_idx, cls_dets_center[best_det_idx], 'like ', 'idf_center', idf_center)
-            # print('after label %d modifity labels: ' % idf, labels)
-            #
-            if idf in labels:
-                # print('idf_center ', idf, '+')
+                # add count
+                # print('idf_center ', idf_center, '+')
                 if count < self.center_keep_time:
                     count += 1
             else:
-                # print('idf_center ', idf, '-')
+                # sub count
+                # print('idf_center ', idf_center, '-')
                 if count > 0:
                     count -= 1
+            # add new label codes
+            if count == self.active_limit and idf == -1:   # 如果未被赋予正label值，且达到消除抖动值
+                self.now_max_label += 1
+                # print('======> set new label: %d to ' % self.now_max_label, idf_center)
+                idf = self.now_max_label
             # update 
             cls_idf_center[idf_idx] = [idf, x_c, y_c, count, speed]
             # print('update ', 'cls_idf_center  ', [idf, x_c, y_c, count])
+        # print('after label %d modifity labels: ' % idf, labels)
         # update
         self.idf_center_list[cls_idx] = cls_idf_center
-        # add new label
+        # add new idf_center codes
         for i, label in enumerate(labels):
             xx, yy = cls_dets_center[i]
             if label == 0:
-                new_num = cls_idf_center[-1][0] + 1
-                cls_idf_center.append([new_num, xx, yy, self.center_keep_time, 0.0])
-                labels[i] = new_num
+                # new_num = cls_idf_center[-1][0] + 1
+                label_num = -1  # 抖动消除 未标记为活动的中心点标记为-1， keep_time 设置为1
+                cls_idf_center.append([label_num, xx, yy, 1, 0.0])
+                labels[i] = label_num
         self.idf_center_list[cls_idx] = cls_idf_center
         # print('finally modifity labels: ', labels)
         # print('finally modifity cls_idf_center: ', self.idf_center_list[cls_idx])
@@ -396,6 +376,49 @@ class CustomChecker:
         pass
         return cls_dets
 
+
+    def get_regional(self, regional_file_path):
+        #                      |          \                       /
+        #       -1             |           \                     /   
+        #  ------------     -1 |  1      1  \   -1       -1     /     1
+        #        1             |             \                 /
+        #                      |              \               /    
+        # if direction*y >= direction*(k*x+b):  keep
+        # read point list
+        # for img point
+        line_point_list = []
+
+        with open(regional_file_path, 'r') as fh:
+            lines = fh.readlines()
+        
+        im_w, im_h = int(lines[0].split()[0]), int(lines[0].split()[1])
+
+        for line in lines[1:]:
+            x1, y1, x2, y2, d = line.split()
+            x1, y1, x2, y2, d = float(x1), float(y1), float(x2), float(y2), int(d)
+            x1 = round(x1*im_w)
+            y1 = round(y1*im_h)
+            x2 = round(x2*im_w)
+            y2 = round(y2*im_h)
+            line_point_list.append((x1, y1, x2, y2, d))
+
+        # for video
+        # line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.50), round(im_h*0.15),  1),
+        #                    ( round(im_w*0.50), round(im_h*0.15), im_w            , round(im_h*0.61),  1),
+        #                    ( im_w            , round(im_h*0.61), im_w            , im_h            , -1),
+        #                    ( im_w            , im_h            , round(im_w*0.26), im_h            , -1),
+        #                    ( round(im_w*0.26), im_h            , 0               , round(im_h*0.61), -1),
+        #                    ( 0               , round(im_h*0.61), 0               , round(im_h*0.15),  1)]
+
+        # for image
+        # line_point_list = [( 0               , round(im_h*0.15), round(im_w*0.60), round(im_h*0.15),  1),
+        #                    ( round(im_w*0.60), round(im_h*0.15), im_w            , round(im_h*0.65),  1),
+        #                    ( im_w            , round(im_h*0.65), im_w            , im_h            , -1),
+        #                    ( im_w            , im_h            , round(im_w/3)   , im_h            , -1),
+        #                    ( round(im_w/3)   , im_h            , 0               , round(im_h/3)   , -1),
+        #                    ( 0               , round(im_h/3)   , 0               , round(im_h*0.15),  1)]
+
+        return line_point_list
 
 
 

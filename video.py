@@ -114,7 +114,7 @@ momentum = cfg.TRAIN.MOMENTUM
 weight_decay = cfg.TRAIN.WEIGHT_DECAY
 
 
-def _get_avg(num_list, long=10):
+def _get_avg(num_list, long=48):
     """average number input.
   Arguments:
     num_list (list): a list of number input
@@ -124,7 +124,7 @@ def _get_avg(num_list, long=10):
     if not num_list:
         return 0
     if len(num_list) >= long:
-        num_avg = sum(num_list[-10:]) / 10
+        num_avg = sum(num_list[-long:]) / long
     else:
         num_avg = sum(num_list) / len(num_list)
 
@@ -155,19 +155,19 @@ def _get_image_blob(im):
     processed_ims = []
     im_scale_factors = []
 
-    # for target_size in cfg.TEST.SCALES:
-    #     im_scale = float(target_size) / float(im_size_min)
-    #     # Prevent the biggest axis from being more than MAX_SIZE
-    #     if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
-    #         im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-    #     im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
-    #                     interpolation=cv2.INTER_LINEAR)
-    #     im_scale_factors.append(im_scale)
-    #     processed_ims.append(im)
+    for target_size in cfg.TEST.SCALES:
+        im_scale = float(target_size) / float(im_size_min)
+        # Prevent the biggest axis from being more than MAX_SIZE
+        if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+            im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+        im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
+                        interpolation=cv2.INTER_LINEAR)
+        im_scale_factors.append(im_scale)
+        processed_ims.append(im)
 
     # no need to change size
-    im_scale_factors.append(1.0)
-    processed_ims.append(im_orig)
+    # im_scale_factors.append(1.0)
+    # processed_ims.append(im_orig)
 
     # Create a blob to hold the input images
     blob = im_list_to_blob(processed_ims)
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     # point out how to encode videos
     # I420-avi=>cv2.cv.CV_FOURCC('X','2','6','4');
     # MP4=>cv2.cv.CV_FOURCC('M', 'J', 'P', 'G')
-    result_path = os.path.join(args.video_dir, args.video_file_name[:-4] + "_det.avi")
+    result_path = video_file_name[:-4] + "_det.avi"
     videowriter = cv2.VideoWriter(result_path, cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'), fps, size)
 
     print('Loaded Photo: {} images.'.format(num_images))
@@ -354,8 +354,17 @@ if __name__ == '__main__':
     # pynvml.nvmlShutdown()
     
     # 区域检测器
-    custom_checker = CustomChecker('./cfgs/video_defult.txt')
+    checker_set_file_path = video_file_name[:-4] + ".txt"
+    if not os.path.exists(checker_set_file_path):
+        print('%s not find!' % checker_set_file_path)
+        checker_set_file_path = './cfgs/video_defult.txt'
+        print('using %s file now!' % checker_set_file_path)
+    else:
+        print('using %s file now!' % checker_set_file_path)
+    custom_checker = CustomChecker(checker_set_file_path)
     
+    # 计时
+    global_time_start = time.time()
     total_time_list = []  # 预设的空值
     detect_time_list = []  # 预设空值
     nms_time_list = []  # 预设空值
@@ -500,17 +509,18 @@ if __name__ == '__main__':
         # plot box and label
         im2show = np.copy(im_bgr)
         # thresh check // regional check // identify check // path predict
-        all_cls_dets = custom_checker.thresh_check(all_cls_dets)
+        all_cls_dets = custom_checker.thresh_check(all_cls_dets, thresh=0.95)
         im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
         im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
-        im2show = custom_checker.path_predict(im2show)
+        # im2show = custom_checker.path_predict(im2show)
+        im2show = custom_checker.count_check(im2show)
         # plot box and label
         for j in range(1, len(pascal_classes)):
             if len(all_cls_dets[j-1]):    # no value check
                 cls_dets = all_cls_dets[j-1]
                 cls_labels = all_cls_labels[j-1]
                 cls_speeds = all_cls_speeds[j-1]
-                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds=False)
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds=np.empty((0)))
         # plot string
         # model info
         model_name = args.net
@@ -569,3 +579,7 @@ if __name__ == '__main__':
     if webcam_num >= 0:
         cap.release()
         cv2.destroyAllWindows()
+        
+    # 计时
+    global_time = time.time() - global_time_start
+    print("\nAll HAVE DONE ! time use %.2fs" % global_time)

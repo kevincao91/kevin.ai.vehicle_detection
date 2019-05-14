@@ -10,17 +10,19 @@ import numpy as np
 
   
 
-def vis_detections_beautiful(im, class_name, cls_dets, cls_labels=False, cls_speeds=False):
+def vis_detections_beautiful(im, class_name, cls_dets, cls_labels, cls_speeds):
     """Visual debugging of detections."""
     im_w = im.shape[0]
     im_h = im.shape[1]
-    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1100) / 1100)
+    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
     for i in range(np.minimum(20, cls_dets.shape[0]) - 1, -1, -1):
         bbox = tuple(int(np.round(x)) for x in cls_dets[i, :4])
         score = cls_dets[i, -1]
-        if cls_labels.any():
+        # print('|||||||||| cls_labels', cls_labels)
+        # print(cls_labels.size)
+        if cls_labels.size:
             label = cls_labels[i]
-        if cls_speeds != False:
+        if cls_speeds.size:
             speed = cls_speeds[i]
         
         # plot
@@ -52,13 +54,13 @@ def vis_detections_beautiful(im, class_name, cls_dets, cls_labels=False, cls_spe
         # 大框
         cv2.rectangle(im, (x1, y1), (x2, y2), color3, thickness=r_s)
         # 文字
-        if cls_labels.any():
+        if cls_labels.size:
             cv2.putText(im, '%s %d' % (class_name, label), (x2 + r_s, y1 - round(r_s / 2) + round(r_h / 2) + t_h), f_s, t_s, color4,
                         thickness=t_t)
         else:
             cv2.putText(im, '%s' % class_name, (x2 + r_s, y1 - round(r_s / 2) + round(r_h / 2) + t_h), f_s, t_s, color4,
                         thickness=t_t)
-        if cls_speeds != False:
+        if cls_speeds.size:
             if speed > 0.2:
                 cv2.putText(im, '%.3f' % speed, (x2 + r_s, y1 - round(r_s / 2) + round(r_h * 3 / 2) + t_h), f_s, t_s,
                             color5, thickness=t_t)
@@ -77,7 +79,7 @@ def vis_text_beautiful(im, str_list):
     im_h = im.shape[0]
     im_w = im.shape[1]
 
-    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1110) / 1110)
+    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
     # print(show_scale)
 
     gpu_name, mem_used, mem_total, model_name, file_name, detect_time_avg, nms_time_avg, total_time_avg,\
@@ -85,10 +87,13 @@ def vis_text_beautiful(im, str_list):
 
     file_name = file_name.split('/')[1] + '/' + file_name.split('/')[3][:-4]
 
-    show_string_1 = 'device: %s  mem: %.3f G / %.3f G  model: %s  size: %d * %d' % (gpu_name, mem_used, mem_total,
-file_name, im_w, im_h)
-    show_string_2 = 'detect: %.3fs    nms: %.3fs    total: %.3fs    FPS: %.3f' % (detect_time_avg, nms_time_avg,
-                                                                                  total_time_avg, frame_rate_avg)
+    show_string_1 = 'device: %s  model: %s  size: %d * %d' % (gpu_name, file_name, im_w, im_h)
+    show_string_2 = 'detect: %.3fs  nms: %.3fs  total: %.3fs  FPS: %.3f  mem: %.3fG / %.3fG' % (detect_time_avg,
+                                                                                                  nms_time_avg,
+                                                                                                  total_time_avg,
+                                                                                                  frame_rate_avg,
+                                                                                                  mem_used,
+                                                                                                  mem_total)
 
     color1, color2 = (255, 255, 255), (255, 255, 255)
 
@@ -105,3 +110,32 @@ file_name, im_w, im_h)
     cv2.putText(im, show_string_2, (x2, y2), f_s, t_s, color2, thickness=t_t)
 
     return im
+    
+def vis_count_text(im, str_list):
+    """Visual debugging of detections."""
+    im_h = im.shape[0]
+    im_w = im.shape[1]
+
+    show_scale = 1.0 * np.e ** ((min(im_w, im_h) - 1000) / 1000)
+    # print(show_scale)
+
+    now_max_label, count_per_count_time, max_count_per_count_time = str_list
+
+
+    show_string_1 = 'total count: %d  count per min: %d  max count per min: %d' % (now_max_label, count_per_count_time, max_count_per_count_time)
+
+    color1 = (255, 255, 255)
+
+    f_s = cv2.FONT_HERSHEY_SIMPLEX  # 文字字体
+    t_s = 1.0 * show_scale  # 文字大小
+    t_t = round(2 * show_scale)  # 文字线条粗细
+
+    # location
+    x1, y1 = 20, 90
+
+    # 文字
+    cv2.putText(im, show_string_1, (x1, y1), f_s, t_s, color1, thickness=t_t)
+
+    return im
+    
+    

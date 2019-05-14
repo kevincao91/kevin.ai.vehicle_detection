@@ -104,7 +104,7 @@ momentum = cfg.TRAIN.MOMENTUM
 weight_decay = cfg.TRAIN.WEIGHT_DECAY
 
 
-def _get_avg(num_list, long=10):
+def _get_avg(num_list, long=48):
     """average number input.
   Arguments:
     num_list (list): a list of number input
@@ -482,17 +482,18 @@ if __name__ == '__main__':
         # plot box and label
         im2show = np.copy(im_bgr)
         # thresh check // regional check // identify check // path predict
-        all_cls_dets = custom_checker.thresh_check(all_cls_dets)
+        all_cls_dets = custom_checker.thresh_check(all_cls_dets, thresh=0.95)
         im2show, all_cls_dets = custom_checker.regional_check(im2show, all_cls_dets)
         im2show, all_cls_dets, all_cls_labels, all_cls_speeds = custom_checker.identify_check(im2show, all_cls_dets)
         im2show = custom_checker.path_predict(im2show)
+        im2show = custom_checker.count_check(im2show)
         # plot box and label
         for j in range(1, len(pascal_classes)):
             if len(all_cls_dets[j-1]):    # no value check
                 cls_dets = all_cls_dets[j-1]
                 cls_labels = all_cls_labels[j-1]
                 cls_speeds = all_cls_speeds[j-1]
-                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels, cls_speeds)
+                im2show = vis_detections_beautiful(im2show, pascal_classes[j], cls_dets, cls_labels=cls_labels, cls_speeds=cls_speeds)
         # plot string
         # model info
         model_name = args.net
@@ -553,3 +554,5 @@ if __name__ == '__main__':
     if webcam_num >= 0:
         cap.release()
         cv2.destroyAllWindows()
+        
+    print('All Have Done !')
