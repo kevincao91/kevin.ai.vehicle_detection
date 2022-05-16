@@ -1,7 +1,7 @@
 kevin.ai.vehicle_detection
 ====
 
-A pytorch implementation of vehicle detection.
+A pytorch implementation of vehicle detection. Base on https://github.com/kevincao91/kevin.ai.faster_rcnn_pytorch_1.0_torchvision
 -------
 
 # Introduction
